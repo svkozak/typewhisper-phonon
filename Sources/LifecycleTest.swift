@@ -25,13 +25,12 @@ func waitForExit(_ pid: Int32) async throws {
 
 @main struct LifecycleTest {
     static func main() async throws {
-        let root = URL(fileURLWithPath: RuntimeLocation.directory)
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
         let native = ProcessInfo.processInfo.environment["PHONON_TEST_NATIVE_EXECUTABLE"].map { URL(fileURLWithPath: $0) }
-        let runtime = native?.deletingLastPathComponent() ?? ProcessInfo.processInfo.environment["PHONON_TEST_RUNTIME_DIR"].map { URL(fileURLWithPath: $0) } ?? root
+            ?? root.appendingPathComponent("build/PhononPlugin.bundle/Contents/Resources/Native/PhononSwift")
         let data = ProcessInfo.processInfo.environment["PHONON_TEST_DATA_DIR"].map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.temporaryDirectory.appendingPathComponent("phonon-lifecycle-" + UUID().uuidString)
-        let helper = root.appendingPathComponent("scripts/managed-server.py")
-        let server = PhononServer(runtime: runtime, helper: native ?? helper, dataDirectory: data, nativeExecutable: native)
+        let server = PhononServer(executable: native, dataDirectory: data)
         defer { server.stop(); if ProcessInfo.processInfo.environment["PHONON_TEST_DATA_DIR"] == nil { try? FileManager.default.removeItem(at: data) } }
         server.start()
         try await waitForServer(server)
@@ -101,19 +100,21 @@ func waitForExit(_ pid: Int32) async throws {
         try check(server.status == .stopped, "rapid stop/start does not let old tasks stop the new server")
         let stallScript = data.appendingPathComponent("stall.py")
         try "import time; time.sleep(60)".write(to: stallScript, atomically: true, encoding: .utf8)
-        let stalled = PhononServer(runtime: native == nil ? runtime : root, helper: stallScript, dataDirectory: data, startupTimeout: 0.1)
+        let python = URL(fileURLWithPath: ProcessInfo.processInfo.environment["PHONON_TEST_PYTHON"] ?? "/usr/bin/python3")
+        let stalled = PhononServer(executable: python, dataDirectory: data,
+                                   arguments: ["-I", "-B", "-u", stallScript.path], startupTimeout: 0.1)
         stalled.start()
         defer { stalled.stop() }
         try await Task.sleep(for: .seconds(1))
         if case .failed(let message) = stalled.status {
             try check(message.contains("timed out") && stalled.processIdentifier == nil, "startup timeout stops the helper")
         } else { throw PhononError(message: "Stalled startup did not fail") }
-        let missing = PhononServer(runtime: data.appendingPathComponent("missing"), helper: helper, dataDirectory: data)
+        let missing = PhononServer(executable: data.appendingPathComponent("missing"), dataDirectory: data)
         missing.start()
         defer { missing.stop() }
         try await Task.sleep(for: .milliseconds(500))
         if case .failed(let message) = missing.status {
-            try check(message.contains("runtime is missing"), "missing runtime produces an actionable error")
-        } else { throw PhononError(message: "Missing runtime did not fail") }
+            try check(message.contains("engine is missing"), "missing engine produces an actionable error")
+        } else { throw PhononError(message: "Missing engine did not fail") }
     }
 }

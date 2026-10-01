@@ -18,9 +18,11 @@ import TypeWhisperPluginSDK
   var oversized = wav; oversized.append(Data(count: 31_000_000))
   try await expect("oversized WAV", contains: "too large", audio: AudioData(samples: [], wavData: oversized, duration: 0))
   try await expect("inactive plugin", contains: "Enable Phonon", audio: valid)
-  let runtime = URL(fileURLWithPath: RuntimeLocation.directory)
+  let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
   let folder = FileManager.default.temporaryDirectory.appendingPathComponent("phonon-http-test-" + UUID().uuidString)
-  let server = PhononServer(runtime: runtime, helper: runtime.appendingPathComponent("scripts/mock-error-server.py"), dataDirectory: folder)
+  let python = URL(fileURLWithPath: ProcessInfo.processInfo.environment["PHONON_TEST_PYTHON"] ?? "/usr/bin/python3")
+  let server = PhononServer(executable: python, dataDirectory: folder,
+                            arguments: ["-I", "-B", "-u", root.appendingPathComponent("scripts/mock-error-server.py").path])
   server.start()
   defer { server.stop(); try? FileManager.default.removeItem(at: folder) }
   let deadline = Date().addingTimeInterval(10)

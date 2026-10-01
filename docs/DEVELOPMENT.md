@@ -11,7 +11,7 @@ Set `DEVELOPER_DIR` to your full Xcode installation. For example:
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 xcodebuild -downloadComponent MetalToolchain
-bash scripts/build-native-plugin.sh
+bash scripts/build.sh
 # Quit TypeWhisper before installing:
 bash scripts/install-plugin.sh --replace
 ```
@@ -83,7 +83,7 @@ image for an approval ticket that is available offline.
 To notarise an existing signed disk image:
 
 ```sh
-bash scripts/notarize-native-release.sh /PATH/TO/PhononPlugin-0.5.0.dmg \
+bash scripts/notarize-native-release.sh /PATH/TO/PhononPlugin-0.5.1.dmg \
   --asc-profile YOUR_PROFILE
 ```
 

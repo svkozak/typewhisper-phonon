@@ -17,11 +17,12 @@ API key is needed to use the plugin.
 1. Quit TypeWhisper.
 2. Open the signed, notarised release disk image.
 3. Copy `PhononPlugin.bundle` into `~/Library/Application Support/TypeWhisper/Plugins/`.
-4. Open TypeWhisper and enable **Phonon Local (Swift)**.
-5. Wait for the model download and preparation, then select **Phonon-2 (Swift / MLX)**.
+4. Open TypeWhisper and enable **Phonon**.
+5. Wait for the model download and preparation, then select the **Phonon** engine
+   and **Phonon-2** model.
 
-Those are the names shown in version 0.5.0. When updating, replace the existing
-bundle while TypeWhisper is closed. The model cache is preserved.
+When updating, replace the existing bundle while TypeWhisper is closed. The
+model cache is preserved.
 
 ## Use
 
@@ -35,17 +36,16 @@ Model files and logs are stored under:
 ~/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon/
 ```
 
-Check the model status in the plugin settings. If setup fails, use **Restart
-Phonon** to retry or **Show Logs** to inspect the error.
+Check the model status in the plugin settings. If setup fails, select **Retry**.
+Logs are available under **Troubleshooting → Show Logs**.
 
 ## Development
 
-The native implementation is on the `native-swift-plugin` branch. Building needs
-full Xcode with Swift 6.3+, its Metal toolchain, Python 3 for build scripts, and
+Building needs full Xcode with Swift 6.3+, its Metal toolchain, and
 TypeWhisper 1.6.1 installed in `/Applications`.
 
 ```sh
-bash scripts/build-native-plugin.sh
+bash scripts/build.sh
 # Quit TypeWhisper before installing:
 bash scripts/install-plugin.sh --replace
 ```

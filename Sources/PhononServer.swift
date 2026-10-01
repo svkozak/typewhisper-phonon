@@ -11,10 +11,10 @@ enum PhononServerState: Sendable, Equatable {
     case stopped, starting, ready, installing(String), failed(String)
     var message: String {
         switch self {
-        case .stopped: "Server stopped"
+        case .stopped: "Model not loaded"
         case .installing(let message): message
-        case .starting: "Starting Phonon… Loading the model may take a moment."
-        case .ready: "Ready for English dictation"
+        case .starting: "Loading model…"
+        case .ready: "Ready"
         case .failed(let message): message
         }
     }
@@ -31,20 +31,16 @@ final class PhononServer: @unchecked Sendable {
     private var lifetime: Pipe?
     private var connection: PhononConnection?
     private var supervisor: Task<Void, Never>?
-    private let runtime: URL
-    private let setup: PhononRuntime?
-    private let nativeExecutable: URL?
-    private let helper: URL
+    private let executable: URL
+    private let arguments: [String]
     private let dataDirectory: URL
     private let changed: @Sendable () -> Void
     private let startupTimeout: TimeInterval
 
-    init(runtime: URL, helper: URL, dataDirectory: URL, startupTimeout: TimeInterval = 600, setup: PhononRuntime? = nil, nativeExecutable: URL? = nil,
+    init(executable: URL, dataDirectory: URL, arguments: [String] = ["--serve"], startupTimeout: TimeInterval = 600,
          changed: @escaping @Sendable () -> Void = {}) {
-        self.runtime = runtime
-        self.setup = setup
-        self.nativeExecutable = nativeExecutable
-        self.helper = helper
+        self.executable = executable
+        self.arguments = arguments
         self.dataDirectory = dataDirectory
         self.startupTimeout = startupTimeout
         self.changed = changed
@@ -115,17 +111,13 @@ final class PhononServer: @unchecked Sendable {
         let token: String
     }
 
-    private func launch(runtime: URL, generation expectedGeneration: Int) throws -> Launch {
+    private func launch(generation expectedGeneration: Int) throws -> Launch {
         try lock.withLock {
             guard enabled, generation == expectedGeneration, !Task.isCancelled else { throw CancellationError() }
             stopProcessLocked()
             state = .starting
-            let standalonePython = runtime.appendingPathComponent("bin/python3.12")
-            let isBundledRuntime = FileManager.default.isExecutableFile(atPath: standalonePython.path)
-            let python = nativeExecutable ?? (isBundledRuntime ? standalonePython : runtime.appendingPathComponent(".venv/bin/python"))
-            guard FileManager.default.isExecutableFile(atPath: python.path),
-                  FileManager.default.fileExists(atPath: helper.path) else {
-                throw PhononError(message: "Phonon runtime is missing. Run scripts/setup-runtime.sh in \(runtime.path), then restart Phonon.")
+            guard FileManager.default.isExecutableFile(atPath: executable.path) else {
+                throw PhononError(message: "Phonon engine is missing. Reinstall the plugin, then retry.")
             }
             try FileManager.default.createDirectory(at: dataDirectory, withIntermediateDirectories: true,
                                                    attributes: [.posixPermissions: 0o700])
@@ -139,13 +131,11 @@ final class PhononServer: @unchecked Sendable {
             let token = UUID().uuidString + UUID().uuidString
             let input = Pipe()
             let child = Process()
-            child.executableURL = python
-            child.arguments = nativeExecutable == nil ? ["-I", "-B", "-u", helper.path] : ["--serve"]
-            child.currentDirectoryURL = runtime
+            child.executableURL = executable
+            child.arguments = arguments
+            child.currentDirectoryURL = executable.deletingLastPathComponent()
             var environment = ProcessInfo.processInfo.environment
-            environment["HF_HOME"] = dataDirectory.appendingPathComponent("Models/huggingface").path
             environment["FERMION_CACHE_DIR"] = dataDirectory.appendingPathComponent("Models/fermion").path
-            environment["PYTHONUNBUFFERED"] = "1"
             child.environment = environment
             child.standardInput = input
             child.standardOutput = log
@@ -184,8 +174,7 @@ final class PhononServer: @unchecked Sendable {
         }
         while Date() < deadline {
             try Task.checkCancellation()
-            if nativeExecutable != nil,
-               let data = try? Data(contentsOf: statusFile),
+            if let data = try? Data(contentsOf: statusFile),
                let progress = try? JSONDecoder().decode(Progress.self, from: data) {
                 if progress.failed { throw PhononError(message: progress.message) }
                 let updated = lock.withLock {
@@ -220,19 +209,7 @@ final class PhononServer: @unchecked Sendable {
         var crashCount = 0
         while !Task.isCancelled {
             do {
-                let preparedRuntime: URL
-                if let setup {
-                    preparedRuntime = try await setup.prepare { [weak self] message in
-                        guard let self else { return }
-                        let active = self.lock.withLock {
-                            guard self.enabled, self.generation == expectedGeneration else { return false }
-                            self.state = .installing(message)
-                            return true
-                        }
-                        if active { self.notify() }
-                    }
-                } else { preparedRuntime = runtime }
-                let launch = try launch(runtime: preparedRuntime, generation: expectedGeneration)
+                let launch = try launch(generation: expectedGeneration)
                 notify()
                 let readyConnection = try await waitUntilReady(launch)
                 let accepted = lock.withLock {

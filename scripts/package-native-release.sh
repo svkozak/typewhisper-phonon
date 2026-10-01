@@ -19,15 +19,15 @@ stage=$(mktemp -d "$PWD/build/release-stage.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 ditto "$bundle" "$stage/PhononPlugin.bundle"
 cat > "$stage/Install Phonon.txt" <<'TXT'
-Phonon Local (Swift) — Apple Silicon, macOS 14+, TypeWhisper 1.6.1
+Phonon — Apple Silicon, macOS 14+, TypeWhisper 1.6.1
 
 1. Quit TypeWhisper.
 2. Copy PhononPlugin.bundle into:
    ~/Library/Application Support/TypeWhisper/Plugins/
    Replace the previous PhononPlugin.bundle when updating.
-3. Open TypeWhisper and enable Phonon Local (Swift).
+3. Open TypeWhisper and enable Phonon.
 4. Wait for the 164 MB model download and model preparation.
-5. Select Phonon-2 (Swift / MLX) for English dictation.
+5. Select Phonon engine and Phonon-2 model for English dictation.
 
 The model downloads once into TypeWhisper's PluginData folder. Subsequent
 startup and transcription work offline. No Python or Homebrew is required.
@@ -39,7 +39,7 @@ be blocked by macOS when transferred to another Mac.
 TXT
 dmg="$output/PhononPlugin-$version.dmg"
 [[ ! -e "$dmg" ]] || { echo "Output already exists: $dmg"; exit 1; }
-hdiutil create -volname "Phonon Local $version" -srcfolder "$stage" -format UDZO -imagekey zlib-level=9 "$dmg"
+hdiutil create -volname "Phonon $version" -srcfolder "$stage" -format UDZO -imagekey zlib-level=9 "$dmg"
 codesign --sign "$identity" --timestamp "$dmg"
 status='Signed; notarisation not requested'
 if [[ ${#notary_args[@]} -gt 0 ]]; then
