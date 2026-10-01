@@ -2,10 +2,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 export DEVELOPER_DIR="${DEVELOPER_DIR:-/Applications/Xcode-26.6.0.app/Contents/Developer}"
-[[ $# -ge 2 && $# -le 3 ]] || { echo 'Usage: package-native-release.sh OUTPUT_DIRECTORY DEVELOPER_ID_IDENTITY [NOTARY_KEYCHAIN_PROFILE]'; exit 1; }
+[[ $# -ge 2 && $# -le 4 ]] || { echo 'Usage: package-native-release.sh OUTPUT_DIRECTORY DEVELOPER_ID_IDENTITY [NOTARY_KEYCHAIN_PROFILE | --asc-profile ASC_PROFILE]'; exit 1; }
 output="$1"
 identity="$2"
-profile="${3:-}"
+notary_args=("${@:3}")
 [[ "$output" == /* ]] || { echo 'Use an absolute output directory.'; exit 1; }
 bundle="$PWD/build/PhononPlugin.bundle"
 [[ -x "$bundle/Contents/Resources/Native/PhononSwift" ]] || { echo 'Build the native plugin first.'; exit 1; }
@@ -42,8 +42,8 @@ dmg="$output/PhononPlugin-$version.dmg"
 hdiutil create -volname "Phonon Local $version" -srcfolder "$stage" -format UDZO -imagekey zlib-level=9 "$dmg"
 codesign --sign "$identity" --timestamp "$dmg"
 status='Signed; notarisation not requested'
-if [[ -n "$profile" ]]; then
-    bash scripts/notarize-native-release.sh "$dmg" "$profile"
+if [[ ${#notary_args[@]} -gt 0 ]]; then
+    bash scripts/notarize-native-release.sh "$dmg" "${notary_args[@]}"
     status='Accepted; ticket stapled to disk image'
 fi
 ditto -c -k --keepParent "$bundle" "$output/PhononPlugin-$version.zip"

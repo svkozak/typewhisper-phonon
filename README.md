@@ -24,6 +24,13 @@ Apple's workflow: https://developer.apple.com/documentation/security/customizing
 To notarise an already signed release later without rebuilding it, run
 `bash scripts/notarize-native-release.sh /PATH/TO/PhononPlugin-0.5.0.dmg NOTARY_KEYCHAIN_PROFILE`.
 
+An existing App Store Connect CLI API key also works. With `asc` configured for
+the same Developer team as the signing certificate, use
+`bash scripts/notarize-native-release.sh /PATH/TO/PhononPlugin-0.5.0.dmg --asc-profile business`.
+The script uses the CLI's Keychain credentials directly. No app-specific password
+or private-key export is needed. The release packager also accepts
+`--asc-profile business` in place of a notarytool profile.
+
 Native verification:
 
 ```sh
