@@ -1,0 +1,14 @@
+{
+  "id": "local.typewhisper.phonon",
+  "name": "Phonon Local",
+  "version": "0.1.0",
+  "minHostVersion": "1.6.1",
+  "sdkCompatibilityVersion": "v1",
+  "minOSVersion": "14.0",
+  "author": "Personal prototype",
+  "description": "Local WAV-first English batch transcription with Phonon-2.",
+  "category": "transcription",
+  "hosting": "local",
+  "requiresAPIKey": false,
+  "principalClass": "PhononPlugin"
+}
