@@ -33,15 +33,17 @@ final class PhononServer: @unchecked Sendable {
     private var supervisor: Task<Void, Never>?
     private let runtime: URL
     private let setup: PhononRuntime?
+    private let nativeExecutable: URL?
     private let helper: URL
     private let dataDirectory: URL
     private let changed: @Sendable () -> Void
     private let startupTimeout: TimeInterval
 
-    init(runtime: URL, helper: URL, dataDirectory: URL, startupTimeout: TimeInterval = 600, setup: PhononRuntime? = nil,
+    init(runtime: URL, helper: URL, dataDirectory: URL, startupTimeout: TimeInterval = 600, setup: PhononRuntime? = nil, nativeExecutable: URL? = nil,
          changed: @escaping @Sendable () -> Void = {}) {
         self.runtime = runtime
         self.setup = setup
+        self.nativeExecutable = nativeExecutable
         self.helper = helper
         self.dataDirectory = dataDirectory
         self.startupTimeout = startupTimeout
@@ -120,7 +122,7 @@ final class PhononServer: @unchecked Sendable {
             state = .starting
             let standalonePython = runtime.appendingPathComponent("bin/python3.12")
             let isBundledRuntime = FileManager.default.isExecutableFile(atPath: standalonePython.path)
-            let python = isBundledRuntime ? standalonePython : runtime.appendingPathComponent(".venv/bin/python")
+            let python = nativeExecutable ?? (isBundledRuntime ? standalonePython : runtime.appendingPathComponent(".venv/bin/python"))
             guard FileManager.default.isExecutableFile(atPath: python.path),
                   FileManager.default.fileExists(atPath: helper.path) else {
                 throw PhononError(message: "Phonon runtime is missing. Run scripts/setup-runtime.sh in \(runtime.path), then restart Phonon.")
@@ -138,7 +140,7 @@ final class PhononServer: @unchecked Sendable {
             let input = Pipe()
             let child = Process()
             child.executableURL = python
-            child.arguments = ["-I", "-B", "-u", helper.path]
+            child.arguments = nativeExecutable == nil ? ["-I", "-B", "-u", helper.path] : ["--serve"]
             child.currentDirectoryURL = runtime
             var environment = ProcessInfo.processInfo.environment
             environment["HF_HOME"] = dataDirectory.appendingPathComponent("Models/huggingface").path

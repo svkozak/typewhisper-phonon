@@ -17,6 +17,9 @@ if [[ -z "${DEVELOPER_DIR:-}" && "$(xcode-select -p)" == /Library/Developer/Comm
 fi
 frameworks=/Applications/TypeWhisper.app/Contents/Frameworks
 mkdir -p build/PhononPlugin.bundle/Contents/{MacOS,Resources}
+# This script builds the Python variant. The native builder adds its generated
+# helper only after this step, so switching variants cannot reuse stale engines.
+rm -rf build/PhononPlugin.bundle/Contents/Resources/Native
 python3 - "$PWD" <<'PY'
 import json,sys,pathlib
 root=sys.argv[1]

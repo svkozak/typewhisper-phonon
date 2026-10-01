@@ -60,3 +60,7 @@ are saved under `.build/comparison` by default.
   memory management, and deployment testing. Signing/notarisation remain separate.
 
 See THIRD_PARTY_NOTICES.md and FERMION-LICENSE for source provenance.
+
+## TypeWhisper native helper mode
+
+`--serve` runs the same engine as an owned loopback helper for the native test plugin. Configuration arrives on a private stdin pipe. The helper watches owner exit and pipe EOF, validates an instance-specific readiness file, requires a bearer token for uploads, decodes WAV audio in memory, and performs serial inference. `scripts/build-native-plugin.sh` packages it in a real TypeWhisper bundle. This first test build requires the existing Phonon-2 model cache. `scripts/test-native-helper.py` checks the protocol, authentication, malformed audio, transcription, interrupted-load cleanup, and owner-pipe shutdown.

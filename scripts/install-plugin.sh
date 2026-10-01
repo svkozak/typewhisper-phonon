@@ -3,7 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 target="$HOME/Library/Application Support/TypeWhisper/Plugins/PhononPlugin.bundle"
 source_bundle=build/PhononPlugin.bundle
-[[ -f "$source_bundle/Contents/MacOS/PhononPlugin" && -f "$source_bundle/Contents/Resources/managed-server.py" ]] || { echo 'Build the complete plugin first.'; exit 1; }
+[[ -f "$source_bundle/Contents/MacOS/PhononPlugin" && ( -f "$source_bundle/Contents/Resources/managed-server.py" || -x "$source_bundle/Contents/Resources/Native/PhononSwift" ) ]] || { echo 'Build the complete plugin first.'; exit 1; }
 codesign --verify --deep --strict "$source_bundle"
 if pgrep -x TypeWhisper >/dev/null; then
     echo 'Quit TypeWhisper before installing the plugin.'; exit 1

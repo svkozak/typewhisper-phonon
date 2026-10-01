@@ -26,11 +26,12 @@ func waitForExit(_ pid: Int32) async throws {
 @main struct LifecycleTest {
     static func main() async throws {
         let root = URL(fileURLWithPath: RuntimeLocation.directory)
-        let runtime = ProcessInfo.processInfo.environment["PHONON_TEST_RUNTIME_DIR"].map { URL(fileURLWithPath: $0) } ?? root
+        let native = ProcessInfo.processInfo.environment["PHONON_TEST_NATIVE_EXECUTABLE"].map { URL(fileURLWithPath: $0) }
+        let runtime = native?.deletingLastPathComponent() ?? ProcessInfo.processInfo.environment["PHONON_TEST_RUNTIME_DIR"].map { URL(fileURLWithPath: $0) } ?? root
         let data = ProcessInfo.processInfo.environment["PHONON_TEST_DATA_DIR"].map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.temporaryDirectory.appendingPathComponent("phonon-lifecycle-" + UUID().uuidString)
         let helper = root.appendingPathComponent("scripts/managed-server.py")
-        let server = PhononServer(runtime: runtime, helper: helper, dataDirectory: data)
+        let server = PhononServer(runtime: runtime, helper: native ?? helper, dataDirectory: data, nativeExecutable: native)
         defer { server.stop(); if ProcessInfo.processInfo.environment["PHONON_TEST_DATA_DIR"] == nil { try? FileManager.default.removeItem(at: data) } }
         server.start()
         try await waitForServer(server)
@@ -100,7 +101,7 @@ func waitForExit(_ pid: Int32) async throws {
         try check(server.status == .stopped, "rapid stop/start does not let old tasks stop the new server")
         let stallScript = data.appendingPathComponent("stall.py")
         try "import time; time.sleep(60)".write(to: stallScript, atomically: true, encoding: .utf8)
-        let stalled = PhononServer(runtime: runtime, helper: stallScript, dataDirectory: data, startupTimeout: 0.1)
+        let stalled = PhononServer(runtime: native == nil ? runtime : root, helper: stallScript, dataDirectory: data, startupTimeout: 0.1)
         stalled.start()
         defer { stalled.stop() }
         try await Task.sleep(for: .seconds(1))

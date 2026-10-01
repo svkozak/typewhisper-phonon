@@ -15,6 +15,10 @@ import MLXAudioSTT
 
     static func run() throws {
         let args = CommandLine.arguments
+        if args.count == 2, args[1] == "--serve" {
+            try NativeServer.run()
+            return
+        }
         guard args.count >= 3 else {
             throw PrototypeError.invalid("Usage: PhononSwift MODEL_DIRECTORY AUDIO.wav [RUNS=5] [WEIGHT_AUDIT.json]")
         }

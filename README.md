@@ -1,5 +1,26 @@
 # TypeWhisper + Phonon-2 local plugin
 
+## Native Swift test branch
+
+The `native-swift-plugin` branch includes a real TypeWhisper test bundle using a native Swift/MLX helper. Build with `bash scripts/build-native-plugin.sh`. Quit TypeWhisper, then install with `bash scripts/install-plugin.sh --replace` and reopen TypeWhisper. Select Phonon-2 (Swift / MLX), or use the existing Phonon selection.
+
+This first test build reuses the Phonon-2 model already downloaded by the Python variant into `PluginData/local.typewhisper.phonon/Models`. It does not provision a model on a fresh Mac yet. The native helper runs in a separate owned process, keeps the model loaded, requires a private token for audio requests, and stops with TypeWhisper. WAV recordings are decoded in memory. The Python bundle is backed up by the installer for rollback.
+
+Startup includes weight expansion and GPU warm-up. A temporary dense model checkpoint is removed after loading. Native package size, memory peaks, and fresh-Mac model installation still need work. This is a test build with an ad-hoc signature.
+
+Native verification:
+
+```sh
+python3 scripts/test-native-helper.py \
+  "$PWD/build/PhononPlugin.bundle/Contents/Resources/Native/PhononSwift" \
+  "$HOME/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon/Models/fermion" \
+  build/sample.wav
+PHONON_TEST_DATA_DIR="$HOME/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon" \
+  build/bundle-test build/PhononPlugin.bundle build/sample.wav
+```
+
+The following sections document the Python variant and the earlier feasibility tool.
+
 English batch transcription on Apple Silicon. The Swift plugin manages a local
 Python/MLX Phonon-2 server. Audio stays on this Mac. No external transcription
 provider or API key is required. Translation, live streaming, and dictionary or

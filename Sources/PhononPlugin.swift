@@ -11,7 +11,9 @@ struct PhononError: LocalizedError {
 @objc(PhononPlugin)
 public final class PhononPlugin: NSObject, TranscriptionEnginePlugin, PluginSettingsActivityReporting, @unchecked Sendable {
     public static let pluginId = "local.typewhisper.phonon"
-    public static let pluginName = "Phonon Local"
+    public static var pluginName: String {
+        Bundle(for: PhononPlugin.self).url(forResource: "PhononSwift", withExtension: nil, subdirectory: "Native") == nil ? "Phonon Local" : "Phonon Local (Swift)"
+    }
     public override required init() { super.init() }
     // The activation lock protects the controller and host reference together.
     private let activationLock = NSLock()
@@ -37,6 +39,12 @@ public final class PhononPlugin: NSObject, TranscriptionEnginePlugin, PluginSett
 
     private func makeServer(host: any HostServices) -> PhononServer {
         let bundle = Bundle(for: PhononPlugin.self)
+        if let executable = bundle.url(forResource: "PhononSwift", withExtension: nil, subdirectory: "Native") {
+            return PhononServer(runtime: executable.deletingLastPathComponent(), helper: executable,
+                                dataDirectory: host.pluginDataDirectory, nativeExecutable: executable) {
+                Task { @MainActor in host.notifyCapabilitiesChanged() }
+            }
+        }
         let runtime = host.pluginDataDirectory.appendingPathComponent("Runtime")
         let helper = bundle.url(forResource: "managed-server", withExtension: "py")
             ?? URL(fileURLWithPath: RuntimeLocation.directory).appendingPathComponent("scripts/managed-server.py")
@@ -73,7 +81,7 @@ public final class PhononPlugin: NSObject, TranscriptionEnginePlugin, PluginSett
         }
     }
     public let providerId = "phonon-local"
-    public let providerDisplayName = "Phonon-2 (Local)"
+    public var providerDisplayName: String { Self.pluginName.contains("Swift") ? "Phonon-2 (Swift / MLX)" : "Phonon-2 (Local)" }
     public var isConfigured: Bool { serverStatus == .ready }
     public var transcriptionModels: [PluginModelInfo] {
         [PluginModelInfo(id: "phonon-2", displayName: "Phonon-2", sizeDescription: "164 MB download", languageCount: 1)]
@@ -152,7 +160,7 @@ private struct PhononSettingsView: View {
                 .foregroundStyle(isError ? Color.red : Color.primary)
             if isBusy { ProgressView().controlSize(.small) }
             Text("The local server starts automatically when this plugin is enabled. It stops when the plugin is disabled or TypeWhisper exits.")
-            Text("The runtime and model are downloaded once and stored in this plugin’s data folder.").foregroundStyle(.secondary)
+            Text("Swift test build: uses the existing Phonon-2 model. The engine runs locally in a separate native process.").foregroundStyle(.secondary)
             Text("English only. Translation and live streaming are unavailable.")
                 .foregroundStyle(.secondary)
             HStack {
