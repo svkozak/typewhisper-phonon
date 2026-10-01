@@ -1,76 +1,148 @@
-# TypeWhisper + Phonon-2 local prototype
+# TypeWhisper + Phonon-2 local plugin
 
-WAV-first, English batch transcription on Apple Silicon. Personal prototype. Source may be shared through the owner’s private GitHub repository; no public release or marketplace publication. No translation, live streaming, dictionary/prompt hints, account, or API key. Audio goes to the fixed loopback address `127.0.0.1:8010`, never a configured external provider. The unauthenticated endpoint can be used by other local processes while running.
-
-## Installed and pinned
-
-- TypeWhisper 1.6.1, official vendor-linked GitHub DMG; signature verified and Gatekeeper accepted as Notarized Developer ID (team 2D8ALY3LCL).
-- SDK source: TypeWhisper/typewhisper-mac tag v1.6.1, commit 7c4cdd20708556049dccbcb7520eeed44ec6c371. Unmodified SDK sources are vendored solely to emit a compile-time module; plugin links the actual installed host framework. No second SDK runtime is bundled.
-- Python 3.12.12 arm64, isolated uv-managed runtime in `.python`; `.venv` uses it. System Python unchanged. Managed Python comes from Astral's python-build-standalone distribution via uv.
-- fermion-research 0.2.7 and native MLX dependencies from official PyPI; all resolved versions in `requirements.lock`.
-- Official FermionResearch/Phonon-2 five-value model, archive SHA256 `98125795b6dda72f5c6eee9ba33d19815df65dcb18b50a357bf9f73c9935309e`; runtime verified the pinned archive and extracted member hashes.
+English batch transcription on Apple Silicon. The Swift plugin manages a local
+Python/MLX Phonon-2 server. Audio stays on this Mac. No external transcription
+provider or API key is required. Translation, live streaming, and dictionary or
+prompt hints are unsupported.
 
 ## Use
 
-Run from this repository:
+Enable **Phonon Local** in TypeWhisper. Select **Phonon-2 (Local)** as the engine
+and **Phonon-2** as the model. Use English or automatic language, with translation
+off. No terminal command is needed with version 0.3.1.
+
+The plugin starts its server when enabled, checks the loaded model through the
+health endpoint, and reports readiness to TypeWhisper. Settings show startup,
+ready, or error status and provide **Restart Phonon** and **Show Logs** buttons.
+The first recording in a fresh process can take longer than subsequent recordings.
+
+Disabling the plugin closes the owned server. Closing TypeWhisper also closes the
+server, including after a host crash: the helper watches a private parent pipe
+and the parent process. A server crash after readiness triggers up to three
+restart attempts per activation, with 1/2/3-second delays. Startup failures or a
+600-second startup timeout show an error requiring a restart. Recordings are not
+automatically retried after a failed request.
+
+The server binds only to `127.0.0.1` on an OS-assigned free port. Transcription
+requires a random per-process token sent privately over stdin, not through process
+arguments or a persisted settings file. The old manual server on port 8010 is no
+longer used by the plugin. No launch agent, login item, or system-wide Python
+change is needed.
+
+## Runtime and model storage
+
+Version 0.3.1 keeps the `.bundle` small (about 608 KB on the development Mac).
+The plugin downloads a private Python 3.12.12/MLX runtime into its own data folder
+on first activation. The tested runtime is about 473 MB on disk; its compressed
+first-run downloads total about 146 MB. PyTorch, SymPy, NetworkX, and setuptools
+are omitted. This reduces the active runtime footprint rather than merely moving
+the former full environment outside the bundle.
+
+Every interpreter archive and wheel has a pinned official HTTPS URL, byte count,
+and SHA-256 in `Resources/runtime-manifest.json`. Python comes from Astral's
+python-build-standalone releases; wheels come from official PyPI hosting. The
+plugin verifies each download before extraction, installs in a temporary folder,
+validates imports, and publishes the completed version atomically. A file lock
+serializes concurrent setup. Failed or cancelled setup removes the temporary
+installation; completed setup is reused offline. Settings show the current asset
+being installed. No Homebrew, uv, Xcode, system Python, or checkout is needed to
+use the plugin on another compatible Mac.
+
+All active files are under:
+
+`~/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon/`
+
+- `Runtime/cpython312-phonon027-mlx-v2/`: private interpreter and MLX packages.
+- `Models/fermion/speech/`: checksum-verified unpacked Phonon-2 weights.
+- `Models/huggingface/`: original model download cache.
+- `server.log`: the latest owned server's diagnostics.
+
+Model weights are downloaded separately and never placed in the bundle. Internet
+access is needed for initial runtime/model setup, then cached use is local.
+Existing model caches can be copied into the above layout during migration.
+
+The Python runtime starts in isolated mode with bytecode writes disabled. The
+readiness file contains only port, PID, and instance ID; it is removed after
+startup. The plugin does not write audio or the private token to that file or log.
+
+## Build and install
+
+Development requires an arm64 Mac, macOS 14+, Xcode/Swift 6+, `uv`, and exactly
+TypeWhisper **1.6.1** in `/Applications`. The SDK source is pinned to TypeWhisper
+tag v1.6.1, commit `7c4cdd20708556049dccbcb7520eeed44ec6c371`. The plugin links the
+installed host SDK framework; no second SDK runtime is bundled. Rebuild and
+reverify compatibility before using a different host version.
 
 ```sh
-bash scripts/serve.sh
-```
-
-Keep that terminal running; Control-C stops the server. No launch agent, login item, autostart, or background service was installed. Phonon caches unpacked speech weights in `~/.cache/fermion/speech/`; Hugging Face downloads use this repo's `.cache/huggingface`. Initial setup is about 1 GB for the venv, 54 MB Python, plus downloaded/unpacked model caches.
-
-The plugin is installed at `~/Library/Application Support/TypeWhisper/Plugins/PhononPlugin.bundle`. In TypeWhisper, enable **Phonon Local**, select **Phonon-2 (Local)** as the transcription engine and **Phonon-2** as the model. Use English or automatic language and turn off translation. Microphone/accessibility permissions have not been granted by this task; the user must approve those before real dictation. The host scan registered the external bundle **disabled by default**. UI activation/selection has not been verified because Computer Use hit a ScreenCaptureKit capture failure. See BENCHMARK.md for measured latency and the 2.5 GB process footprint / 3.1 GB peak.
-
-The settings view explains the fixed endpoint and manual server command. Errors cover server unavailable, unsupported language/translation, invalid WAV, oversized recording, HTTP failures, and malformed responses. Prompt hints are intentionally omitted because Phonon ignores them.
-
-## Build and verify
-
-Requires arm64 Mac, Xcode/Swift 6+, macOS 14+, TypeWhisper **1.6.1** in `/Applications`. This is pinned to the host binary and source, not intended as a universal ABI compatibility claim. Rebuild and reverify against any future host update.
-
-```sh
+# In a fresh checkout under ~/Dev:
+bash scripts/setup-runtime.sh
 bash scripts/build.sh
-# With server running and a generated/nonprivate WAV:
-build/smoke-test build/sample.wav
-build/bundle-test build/PhononPlugin.bundle build/sample.wav
-# Install on another local setup only if destination does not already exist:
+# Quit TypeWhisper before installing:
 bash scripts/install-plugin.sh
+# For an existing installation, retain a backup outside the Plugins directory:
+bash scripts/install-plugin.sh --replace
 ```
 
-The build uses ad-hoc signing for the local plugin only. The vendor app signature and macOS security protections are unchanged. Public release would require an appropriate distribution signing/notarization plan.
+The build script uses full Xcode rather than incomplete Command Line Tools when
+the known installed Xcode path is available, without changing global tool
+selection. Set `DEVELOPER_DIR` explicitly for another Xcode location.
 
-Generate the nonprivate benchmark sample with the installed macOS Samantha voice:
+`scripts/setup-runtime.sh` prepares the developer environment. It is not required
+on a Mac receiving the compiled bundle. `scripts/generate-runtime-manifest.py`
+regenerates pinned asset metadata from official distributions when intentionally
+updating dependencies; validate a fresh setup and transcription after any change.
+
+The local plugin is ad-hoc signed. The TypeWhisper app signature and macOS
+security protections remain unchanged. Distribution signing/notarization and
+clean-Mac installation verification are separate release work.
+
+## Verify
+
+No manually running server is required. The harnesses activate the plugin or its
+server controller and stop owned processes after testing.
 
 ```sh
 say -v Samantha -o build/sample.aiff 'This is a local speech recognition test. Please schedule the project review for Friday afternoon.'
 afconvert -f WAVE -d LEI16@16000 -c 1 build/sample.aiff build/sample.wav
+build/error-test
+# Validate first-run setup in a dedicated folder (kept for warm tests):
+build/runtime-test "$PWD/build/test-plugin-data"
+"$PWD/build/test-plugin-data/Runtime/cpython312-phonon027-mlx-v2/bin/python3.12" -I -B scripts/tls-test.py
+PHONON_TEST_RUNTIME_DIR="$PWD/build/test-plugin-data/Runtime/cpython312-phonon027-mlx-v2" PHONON_TEST_DATA_DIR="$PWD/build/test-plugin-data" build/lifecycle-test
+PHONON_TEST_DATA_DIR="$PWD/build/test-plugin-data" build/smoke-test build/sample.wav
+PHONON_TEST_DATA_DIR="$PWD/build/test-plugin-data" build/bundle-test build/PhononPlugin.bundle build/sample.wav
+codesign --verify --deep --strict build/PhononPlugin.bundle
 ```
+
+The error harness owns a temporary HTTP fixture and checks audio validation,
+unsupported options, WAV multipart, authentication, HTTP errors, malformed JSON,
+and valid responses. The lifecycle harness checks real model startup, duplicate
+start, authentication, server crash recovery, bounded retries, stop during
+startup, rapid stop/start, startup timeout, and missing-runtime errors. The
+`--owner` lifecycle mode exposes its child PID for an external host-death test.
+
+`BENCHMARK.md` contains measurements from the original manual-server prototype;
+those numbers do not establish the new managed startup latency. Microphone
+permissions and real dictation should be checked by the user in TypeWhisper.
 
 ## Licensing and attribution
 
-Prototype code is GPL-3.0-only; see LICENSE. Vendored SDK is from TypeWhisper and retains its original GPLv3 license in `vendor/TYPEWHISPER-LICENSE`. Phonon runtime is Apache-2.0. Phonon-2 weights are CC-BY-4.0, a derivative of NVIDIA parakeet-tdt-0.6b-v3; model weights are not included in git. Retain Fermion Research attribution and upstream model NOTICE/license when distributing model material. Review all dependency licenses before any public distribution.
+Plugin code is GPL-3.0-only. Vendored TypeWhisper SDK source retains GPLv3.
+Phonon runtime is Apache-2.0. Phonon-2 weights are CC-BY-4.0, derived from NVIDIA
+parakeet-tdt-0.6b-v3. Model material is not included in git or the bundle. See
+`THIRD_PARTY_NOTICES.md`, the bundle's `Licenses` folder, and downloaded dependency
+license metadata. Complete a distribution license review before public release.
 
-Sources: https://www.typewhisper.com/en/ ; https://github.com/TypeWhisper/typewhisper-mac ; https://github.com/fermionresearch/phonon ; https://huggingface.co/FermionResearch/Phonon-2 .
+Sources:
+- https://www.typewhisper.com/en/addons/develop/
+- https://github.com/TypeWhisper/typewhisper-mac
+- https://github.com/fermionresearch/phonon
+- https://huggingface.co/FermionResearch/Phonon-2
 
-## Install on HomeBookPro
+### HTTPS certificate trust
 
-This prototype requires **Apple Silicon**, macOS 14+, Xcode/Swift 6+, and exactly TypeWhisper **1.6.1**. Build checks enforce architecture and host version. The HomeBookPro hardware has not been assessed here.
+The managed Python helper uses `truststore` 0.10.4 to verify HTTPS connections with macOS Keychain trust. This supports organisation certificates already trusted by macOS. Certificate and hostname verification stay enabled. Runtime v2 adds this small package; the first launch provisions the updated runtime separately from the plugin bundle. If certificate errors persist on a managed Mac, ask IT to check the certificate chain and system trust for Hugging Face. Do not disable TLS verification.
 
-1. Install TypeWhisper 1.6.1 from the official vendor-linked release: https://github.com/TypeWhisper/typewhisper-mac/releases/tag/v1.6.1 . Put TypeWhisper.app in `/Applications`. Preserve Gatekeeper protections; verify the app with `codesign --verify --deep --strict /Applications/TypeWhisper.app` and `spctl --assess --type execute -v /Applications/TypeWhisper.app`.
-2. Install Xcode and complete its normal first-run setup. Install `uv` using Astral's official instructions (https://docs.astral.sh/uv/getting-started/installation/) or the Homebrew registry (`brew install uv`). Authenticate GitHub using your normal credentials to access the private repo.
-3. Clone into a new folder and build:
+### Native Swift feasibility prototype
 
-```sh
-mkdir -p ~/Dev
-cd ~/Dev
-git clone https://github.com/svkozak/typewhisper-phonon.git
-cd typewhisper-phonon
-bash scripts/setup-runtime.sh
-bash scripts/build.sh
-bash scripts/install-plugin.sh
-bash scripts/serve.sh
-```
-
-The runtime script preserves existing environments and syncs exact versions from official PyPI. The server’s first run downloads and checksum-verifies the official model. Keep this terminal open. In TypeWhisper enable Phonon Local and select Phonon-2 (Local) / Phonon-2, English, with translation off. Approve microphone/accessibility only when you decide to use dictation. These permissions and plugin activation are manual; installation scripts do not grant them.
-
-For diagnostics with no server listening on 8010, `build/error-test` checks local validation and unavailable-server errors. A temporary test fixture is `scripts/mock-error-server.py`; running `build/error-test --mock` while it listens tests WAV multipart, HTTP failures and malformed responses. It serves exactly three requests and exits; it never uses model weights or personal audio.
+`prototypes/phonon-swift` contains a separate native MLX command-line experiment, build instructions, and an automated comparison with the Python engine. It reads the same Phonon-2 container and checks all 697 mapped tensors. This experiment is not an installable plugin; startup, temporary checkpoint loading, and package size still need optimisation.

@@ -17,14 +17,30 @@ import TypeWhisperPluginSDK
   try await expect("short/invalid WAV", contains: "Expected a WAV", audio: AudioData(samples: [], wavData: Data(), duration: 0))
   var oversized = wav; oversized.append(Data(count: 31_000_000))
   try await expect("oversized WAV", contains: "too large", audio: AudioData(samples: [], wavData: oversized, duration: 0))
-  if CommandLine.arguments.contains("--mock") {
-   try await expect("HTTP failure", contains: "HTTP 503", audio: valid)
-   try await expect("malformed JSON", contains: "invalid transcript", audio: valid)
-   let result = try await plugin.transcribe(audio: valid, language: nil, translate: false, prompt: "ignored hint")
-   guard result.text == "Mock transcript" else { fatalError("Unexpected transcript") }
-   print("PASS: valid JSON response")
-  } else {
-   try await expect("server unavailable", contains: "Start scripts/serve.sh", audio: valid)
+  try await expect("inactive plugin", contains: "Enable Phonon", audio: valid)
+  let runtime = URL(fileURLWithPath: RuntimeLocation.directory)
+  let folder = FileManager.default.temporaryDirectory.appendingPathComponent("phonon-http-test-" + UUID().uuidString)
+  let server = PhononServer(runtime: runtime, helper: runtime.appendingPathComponent("scripts/mock-error-server.py"), dataDirectory: folder)
+  server.start()
+  defer { server.stop(); try? FileManager.default.removeItem(at: folder) }
+  let deadline = Date().addingTimeInterval(10)
+  while server.status != .ready {
+   guard Date() < deadline else { throw PhononError(message: "Mock readiness timeout") }
+   try await Task.sleep(for: .milliseconds(100))
   }
+  let connection = try server.activeConnection()
+  for expected in ["HTTP 503", "invalid transcript"] {
+   do {
+    _ = try await PhononPlugin.transcribeWAV(wav, connection: connection)
+    throw PhononError(message: "Mock unexpectedly succeeded")
+   } catch let error as PhononError {
+    guard error.message.contains(expected) else { throw error }
+    print("PASS: " + expected)
+   }
+  }
+  let result = try await PhononPlugin.transcribeWAV(wav, connection: connection)
+  guard result.text == "Mock transcript" else { throw PhononError(message: "Wrong mock transcript") }
+  print("PASS: WAV multipart, private authentication, and valid JSON")
+
  }
 }

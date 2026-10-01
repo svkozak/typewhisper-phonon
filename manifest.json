@@ -1,7 +1,7 @@
 {
   "id": "local.typewhisper.phonon",
   "name": "Phonon Local",
-  "version": "0.1.0",
+  "version": "0.3.1",
   "minHostVersion": "1.6.1",
   "sdkCompatibilityVersion": "v1",
   "minOSVersion": "14.0",

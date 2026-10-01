@@ -4,6 +4,11 @@ import TypeWhisperPluginSDK
     static func main() async throws {
         let wav = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
         let plugin = PhononPlugin()
+        let host = try makeTestHost()
+        plugin.activate(host: host)
+        defer { plugin.deactivate(); cleanupTestHost(host) }
+        try await waitForPlugin(plugin)
+
         let audio = AudioData(samples: [], wavData: wav, duration: 0)
         let start = ContinuousClock.now
         let result = try await plugin.transcribe(audio: audio, language: "en", translate: false, prompt: nil)

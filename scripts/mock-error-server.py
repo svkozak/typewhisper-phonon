@@ -1,8 +1,15 @@
 """Deterministic local HTTP test fixture; no model or personal audio."""
 from http.server import BaseHTTPRequestHandler, HTTPServer
+import json, os, sys
+from pathlib import Path
+config = json.loads(sys.stdin.readline())
 class Handler(BaseHTTPRequestHandler):
     count = 0
+    def do_GET(self):
+        payload = b'{"status":"ok","kind":"speech","model":"FermionResearch/Phonon-2"}'
+        self.send_response(200); self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload)
     def do_POST(self):
+        assert self.headers.get('Authorization') == 'Bearer ' + config['token']
         body = self.rfile.read(int(self.headers['Content-Length']))
         assert self.path == '/v1/audio/transcriptions'
         assert 'multipart/form-data; boundary=' in self.headers['Content-Type']
@@ -15,11 +22,12 @@ class Handler(BaseHTTPRequestHandler):
         Handler.count += 1
         self.send_response(status); self.send_header('Content-Length', str(len(payload))); self.end_headers(); self.wfile.write(payload)
     def log_message(self, *args): pass
-server = HTTPServer(('127.0.0.1', 8010), Handler)
+server = HTTPServer(('127.0.0.1', 0), Handler)
+Path(config['ready_file']).write_text(json.dumps({'port': server.server_address[1], 'pid': os.getpid(), 'instance': config['instance']}))
 server.timeout = 10
 while Handler.count < 3:
     before = Handler.count
     server.handle_request()
-    if Handler.count == before: raise TimeoutError('Test request did not arrive')
+    # Readiness GETs do not increment the transcript request count.
 server.server_close()
 print('PASS: loopback endpoint, WAV multipart, fixed model, omitted language/prompt')
