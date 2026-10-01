@@ -8,7 +8,9 @@ let package = Package(
         .package(url: "https://github.com/ml-explore/mlx-swift.git", exact: "0.32.3"),
     ],
     targets: [
+        .target(name: "CZstd", exclude: ["LICENSE", "COPYING"], publicHeadersPath: "include"),
         .executableTarget(name: "PhononSwift", dependencies: [
+            "CZstd",
             .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
             .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
             .product(name: "MLX", package: "mlx-swift"),

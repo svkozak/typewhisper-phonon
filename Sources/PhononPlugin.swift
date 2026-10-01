@@ -160,7 +160,7 @@ private struct PhononSettingsView: View {
                 .foregroundStyle(isError ? Color.red : Color.primary)
             if isBusy { ProgressView().controlSize(.small) }
             Text("The local server starts automatically when this plugin is enabled. It stops when the plugin is disabled or TypeWhisper exits.")
-            Text("Swift test build: uses the existing Phonon-2 model. The engine runs locally in a separate native process.").foregroundStyle(.secondary)
+            Text("Phonon-2 downloads once (164 MB). Dictation then runs locally with Swift and MLX.").foregroundStyle(.secondary)
             Text("English only. Translation and live streaming are unavailable.")
                 .foregroundStyle(.secondary)
             HStack {

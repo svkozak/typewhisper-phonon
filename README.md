@@ -1,16 +1,35 @@
 # TypeWhisper + Phonon-2 local plugin
 
-## Native Swift test branch
+## Native Swift plugin — 0.5.0
 
-The `native-swift-plugin` branch includes a real TypeWhisper test bundle using a native Swift/MLX helper. Build with `bash scripts/build-native-plugin.sh`. Quit TypeWhisper, then install with `bash scripts/install-plugin.sh --replace` and reopen TypeWhisper. Select Phonon-2 (Swift / MLX), or use the existing Phonon selection.
+The `native-swift-plugin` branch includes a real TypeWhisper bundle using a native Swift/MLX helper. Build with `bash scripts/build-native-plugin.sh`. Quit TypeWhisper, then install with `bash scripts/install-plugin.sh --replace` and reopen TypeWhisper. Select Phonon-2 (Swift / MLX), or use the existing Phonon selection. Recipient Macs need Apple Silicon, macOS 14+, and the tested TypeWhisper 1.6.1 host. They do not need Python, Homebrew, Xcode, or this repository.
 
-This first test build reuses the Phonon-2 model already downloaded by the Python variant into `PluginData/local.typewhisper.phonon/Models`. It does not provision a model on a fresh Mac yet. The native helper runs in a separate owned process, keeps the model loaded, requires a private token for audio requests, and stops with TypeWhisper. WAV recordings are decoded in memory. The Python bundle is backed up by the installer for rollback.
+On first use, the native helper downloads a 163,515,201-byte Phonon-2 archive into a private staging folder under `PluginData/local.typewhisper.phonon/Models/fermion/speech/FermionResearch__Phonon-2`. The HTTPS URL pins revision `ca1bef26bcd8ef4a7e16d0636d8a77bb25e298ee`. The archive, model container, and configuration have pinned SHA-256 checksums. The signed helper includes a small Zstandard decoder; it accepts only the four expected regular archive entries and bounds decompression to 180 MB. Completed installation is published atomically. A file lock serializes installers. Interrupted staging is reclaimed on retry; an incompatible previous model is preserved in a backup folder. Settings report download and loading progress, or a useful error with a restart action.
 
-Startup includes weight expansion and GPU warm-up. A temporary dense model checkpoint is removed after loading. Native package size, memory peaks, and fresh-Mac model installation still need work. This is a test build with an ad-hoc signature.
+The existing Python model cache is reused when its hashes match. Future startup works offline. The model stays outside the bundle. The native helper runs in a separate owned process, keeps the model loaded, requires a private token for audio requests, and stops with TypeWhisper. WAV recordings are decoded in memory. The previous plugin bundle is backed up by the installer for rollback.
+
+Startup includes weight expansion and GPU warm-up. A temporary dense model checkpoint is removed after loading. Allow roughly 2 GB of free disk space during model loading. The GPU library is compiled from the pinned MLX Swift sources (about 1.9 MB); the shipped helper has development symbols removed. Native loading can still peak near 2.6 GB of MLX allocations on the development Mac. This is an early native implementation; accuracy across languages and long recordings is not established.
+
+Development builds use ad-hoc signing. To create a Developer ID signed release, run:
+
+```sh
+bash scripts/package-native-release.sh /ABSOLUTE/OUTPUT/DIRECTORY \
+  'Developer ID Application: YOUR NAME (TEAM_ID)' NOTARY_KEYCHAIN_PROFILE
+```
+
+The optional last argument names a `notarytool` keychain profile. Configure credentials locally with `xcrun notarytool store-credentials`; never put passwords in repository files. Without a profile, the script explicitly produces a signed but **not notarised** release. With a profile, it submits the signed disk image to Apple, requires `Accepted`, staples the ticket, and checks it. The disk image includes the bundle and installation instructions. The release JSON records notarisation status and checksums. Signing alone does not guarantee that Gatekeeper will accept a downloaded plugin on another Mac.
+
+Apple's workflow: https://developer.apple.com/documentation/security/customizing-the-notarization-workflow
+
+To notarise an already signed release later without rebuilding it, run
+`bash scripts/notarize-native-release.sh /PATH/TO/PhononPlugin-0.5.0.dmg NOTARY_KEYCHAIN_PROFILE`.
 
 Native verification:
 
 ```sh
+bash scripts/test-model-store.sh /PATH/TO/phonon-2.bps.tar.zst
+python3 scripts/test-native-model-setup.py \
+  "$PWD/build/PhononPlugin.bundle/Contents/Resources/Native/PhononSwift"
 python3 scripts/test-native-helper.py \
   "$PWD/build/PhononPlugin.bundle/Contents/Resources/Native/PhononSwift" \
   "$HOME/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon/Models/fermion" \
@@ -18,6 +37,8 @@ python3 scripts/test-native-helper.py \
 PHONON_TEST_DATA_DIR="$HOME/Library/Application Support/TypeWhisper/PluginData/local.typewhisper.phonon" \
   build/bundle-test build/PhononPlugin.bundle build/sample.wav
 ```
+
+Use an empty cache path in the helper test to check fresh installation. Python is only the external test harness. The native release contains no interpreter or Python packages. The native build needs a full Xcode installation with its Metal toolchain (`xcodebuild -downloadComponent MetalToolchain`).
 
 The following sections document the Python variant and the earlier feasibility tool.
 

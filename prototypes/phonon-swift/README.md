@@ -19,11 +19,12 @@ prototypes/phonon-swift/.build/release/PhononSwift \
 ```
 
 The build script defaults to the Xcode installation used on the development Mac.
-Set `DEVELOPER_DIR` for another installation. SwiftPM cannot compile the Metal
-library. The script copies the precompiled library from the existing MLX 0.32.3
-wheel, or accepts a matching `mlx.metallib` path as its first argument. The copied
-library remains next to the executable. Production distribution needs an
-independent Metal resource build and appropriate licenses.
+Set `DEVELOPER_DIR` for another installation. The script compiles all prepared
+Metal kernels from the pinned MLX Swift checkout with `xcrun metal` and
+`xcrun metallib`. Install Xcode's Metal toolchain with
+`xcodebuild -downloadComponent MetalToolchain` when needed. The generated
+library remains next to the executable. A separate stripped executable is
+produced for distribution. No Python wheel is used in this native build.
 
 The dependency patch selects `MLX.compile` explicitly at two sites. Without it,
 the upstream module picks a different overload from MLXLMCommon that requires
@@ -49,18 +50,20 @@ are saved under `.build/comparison` by default.
 - The first version expands compressed weights to dense arrays. It writes a
   temporary safetensors checkpoint to adapt to the upstream public loader, then
   removes the checkpoint on exit. It can use roughly 1.3 GB of temporary disk.
-- The executable currently links the broad Swift audio dependency. Binary and
-  Metal resource sizes are not optimised.
+- The executable currently links the broad Swift audio dependency. Distribution
+  removes development symbols and uses a 1.9 MB Metal library. Further dependency
+  reduction is possible.
 - First inference compiles GPU kernels and is much slower than warm inference.
 - Python's default `tdt16,dense16` optimisations are not ported here. Dense Swift
   inference does not prove parity with Phonon's packed execution path.
 - Validation on one generated speech recording establishes loader parity and
   basic transcription, not accuracy across speakers, long recordings or silence.
-- A native plugin still needs host integration, model lifecycle, cancellation,
-  memory management, and deployment testing. Signing/notarisation remain separate.
+- The CLI remains a feasibility tool. The owned-helper mode below supplies the
+  installed plugin's model lifecycle and host integration. Broad accuracy and
+  deployment checks across macOS releases remain separate.
 
 See THIRD_PARTY_NOTICES.md and FERMION-LICENSE for source provenance.
 
 ## TypeWhisper native helper mode
 
-`--serve` runs the same engine as an owned loopback helper for the native test plugin. Configuration arrives on a private stdin pipe. The helper watches owner exit and pipe EOF, validates an instance-specific readiness file, requires a bearer token for uploads, decodes WAV audio in memory, and performs serial inference. `scripts/build-native-plugin.sh` packages it in a real TypeWhisper bundle. This first test build requires the existing Phonon-2 model cache. `scripts/test-native-helper.py` checks the protocol, authentication, malformed audio, transcription, interrupted-load cleanup, and owner-pipe shutdown.
+`--serve` runs the same engine as an owned loopback helper for the native plugin. Configuration arrives on a private stdin pipe. The helper watches owner exit and pipe EOF, validates an instance-specific readiness file, requires a bearer token for uploads, decodes WAV audio in memory, and performs serial inference. `scripts/build-native-plugin.sh` packages it in a real TypeWhisper bundle. Version 0.5.0 downloads and verifies the model on first use, using macOS HTTPS trust and a bundled Zstandard decoder. `scripts/test-native-helper.py` checks the protocol, authentication, malformed audio, transcription, interrupted-load cleanup, and owner-pipe shutdown. `scripts/test-model-store.sh` checks archive bounds, unsafe entries, damaged files, and exact model hashes. See the root README for signing and notarisation.

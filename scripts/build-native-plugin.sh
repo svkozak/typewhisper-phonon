@@ -7,7 +7,10 @@ bundle=build/PhononPlugin.bundle
 native="$bundle/Contents/Resources/Native"
 mkdir -p "$native"
 chmod -R u+w "$bundle/Contents/Resources/Licenses"
-cp prototypes/phonon-swift/.build/release/PhononSwift prototypes/phonon-swift/.build/release/mlx.metallib "$native/"
+cp prototypes/phonon-swift/.build/release/PhononSwift-distribution "$native/PhononSwift"
+cp prototypes/phonon-swift/.build/release/mlx.metallib "$native/"
+cp prototypes/phonon-swift/Sources/CZstd/LICENSE "$bundle/Contents/Resources/Licenses/ZSTD-LICENSE"
+cp prototypes/phonon-swift/Sources/CZstd/COPYING "$bundle/Contents/Resources/Licenses/ZSTD-COPYING"
 cp prototypes/phonon-swift/FERMION-LICENSE "$bundle/Contents/Resources/Licenses/FERMION-LICENSE"
 cp prototypes/phonon-swift/.build/checkouts/mlx-audio-swift/LICENSE "$bundle/Contents/Resources/Licenses/MLX-AUDIO-SWIFT-LICENSE"
 cp prototypes/phonon-swift/.build/checkouts/mlx-swift/LICENSE "$bundle/Contents/Resources/Licenses/MLX-SWIFT-LICENSE"
@@ -23,9 +26,9 @@ for dependency in prototypes/phonon-swift/.build/checkouts/*; do
 done
 # These generated resources belong to the Python variant and are unused here.
 rm -f "$bundle/Contents/Resources/managed-server.py" "$bundle/Contents/Resources/runtime-manifest.json"
-/usr/libexec/PlistBuddy -c 'Set CFBundleShortVersionString 0.4.0' "$bundle/Contents/Info.plist"
-/usr/libexec/PlistBuddy -c 'Set CFBundleVersion 5' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set CFBundleShortVersionString 0.5.0' "$bundle/Contents/Info.plist"
+/usr/libexec/PlistBuddy -c 'Set CFBundleVersion 6' "$bundle/Contents/Info.plist"
 codesign --force --sign - "$native/PhononSwift"
 codesign --force --sign - "$bundle"
 codesign --verify --deep --strict "$bundle"
-echo 'Native Swift test plugin built. It reuses the existing PluginData/Models cache.'
+echo 'Native Swift plugin built. Phonon-2 downloads on first use into PluginData/Models.'

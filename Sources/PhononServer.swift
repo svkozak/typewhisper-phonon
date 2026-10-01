@@ -171,13 +171,30 @@ final class PhononServer: @unchecked Sendable {
     private func waitUntilReady(_ launch: Launch) async throws -> PhononConnection {
         struct Ready: Decodable { let port: Int; let pid: Int32; let instance: String }
         struct Health: Decodable { let status: String; let kind: String; let model: String }
+        struct Progress: Decodable { let message: String; let failed: Bool }
+        let statusFile = URL(fileURLWithPath: launch.readyFile.path + ".status")
         let deadline = Date().addingTimeInterval(startupTimeout)
         let config = URLSessionConfiguration.ephemeral
         config.connectionProxyDictionary = [:]
         let session = URLSession(configuration: config)
-        defer { session.invalidateAndCancel(); try? FileManager.default.removeItem(at: launch.readyFile) }
+        defer {
+            session.invalidateAndCancel()
+            try? FileManager.default.removeItem(at: launch.readyFile)
+            try? FileManager.default.removeItem(at: statusFile)
+        }
         while Date() < deadline {
             try Task.checkCancellation()
+            if nativeExecutable != nil,
+               let data = try? Data(contentsOf: statusFile),
+               let progress = try? JSONDecoder().decode(Progress.self, from: data) {
+                if progress.failed { throw PhononError(message: progress.message) }
+                let updated = lock.withLock {
+                    guard enabled, process === launch.process, state != .installing(progress.message) else { return false }
+                    state = .installing(progress.message)
+                    return true
+                }
+                if updated { notify() }
+            }
             guard launch.process.isRunning else {
                 throw PhononError(message: "Phonon server exited during startup. Check server.log in the plugin data folder.")
             }

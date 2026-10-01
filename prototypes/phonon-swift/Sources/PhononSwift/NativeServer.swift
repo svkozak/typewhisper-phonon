@@ -14,6 +14,15 @@ enum NativeServer {
               let cache = ProcessInfo.processInfo.environment["FERMION_CACHE_DIR"] else {
             throw PrototypeError.invalid("Missing native engine configuration")
         }
+        let statusFile = URL(fileURLWithPath: ready + ".status")
+        do { try serve(token: token, ready: ready, instance: instance, cache: cache, statusFile: statusFile) }
+        catch {
+            ModelStore.status(String(describing: error), file: statusFile, error: true)
+            throw error
+        }
+    }
+
+    private static func serve(token: String, ready: String, instance: String, cache: String, statusFile: URL) throws {
         let dataDirectory = URL(fileURLWithPath: ready).deletingLastPathComponent()
         // Reclaim an interrupted load only after its owning process has exited.
         for previous in try FileManager.default.contentsOfDirectory(at: dataDirectory, includingPropertiesForKeys: nil)
@@ -34,10 +43,8 @@ enum NativeServer {
             while getppid() == parent { Thread.sleep(forTimeInterval: 1) }
             Darwin._exit(0)
         }
-        let directory = URL(fileURLWithPath: cache).appendingPathComponent("speech/FermionResearch__Phonon-2/model_phonon2_c4c_int6")
-        guard FileManager.default.fileExists(atPath: directory.appendingPathComponent("model.fermion").path) else {
-            throw PrototypeError.invalid("The Swift test build needs the existing Phonon-2 model in PluginData/Models. Download it with Phonon Local 0.3.1 first, then install this test build.")
-        }
+        let directory = try ModelStore.ensure(cache: URL(fileURLWithPath: cache), statusFile: statusFile)
+        ModelStore.status("Loading Phonon-2…", file: statusFile)
         print("[phonon-swift] Loading Phonon-2 with native MLX…")
         fflush(stdout)
         let scratch = dataDirectory.appendingPathComponent("native-load-\(getpid())-" + UUID().uuidString)
@@ -51,6 +58,7 @@ enum NativeServer {
         let model = try ParakeetModel.fromDirectory(scratch, computeDType: .bfloat16)
         try FileManager.default.removeItem(at: scratch)
         // Warm GPU kernels before publishing readiness. User audio stays in memory.
+        ModelStore.status("Preparing Phonon-2 for dictation…", file: statusFile)
         _ = model.generate(audio: MLXArray.zeros([16000]))
         Stream.defaultStream.synchronize()
         Memory.clearCache()
