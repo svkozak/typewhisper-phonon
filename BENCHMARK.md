@@ -15,3 +15,5 @@ Input: macOS Samantha generated speech, 5.536 seconds, mono 16 kHz PCM WAV. Expe
 Memory: `vmmap -summary` on the Phonon process reported physical footprint **2.5 GB**, peak **3.1 GB**. Earlier snapshot showed swapped writable regions; RSS alone (roughly 50 MB in ps at one snapshot) badly understates this workload and must not be treated as model memory. This measures the whole Python runtime/model/MLX process, not isolated weights or peak system-wide GPU allocation. On an 8 GB machine this is a meaningful constraint. Keep heavy apps closed and validate sustained dictation before routine adoption.
 
 Temporary server stopped after tests; restart manually with `bash scripts/serve.sh`. Host app installed; plugin bundle installed but remains disabled pending UI activation.
+
+Additional deterministic validation: unsupported-language and oversized-WAV rejection; unavailable-server actionable error; mock HTTP 503 and malformed JSON handling; success parsing; request capture confirms WAV filename/content-type/header, fixed model, fixed loopback path, and omission of unsupported prompt/language fields. All passed. No production defect found.

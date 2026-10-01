@@ -1,6 +1,6 @@
 # TypeWhisper + Phonon-2 local prototype
 
-WAV-first, English batch transcription on Apple Silicon. Local prototype only; nothing has been published. No translation, live streaming, dictionary/prompt hints, account, or API key. Audio goes to the fixed loopback address `127.0.0.1:8010`, never a configured external provider. The unauthenticated endpoint can be used by other local processes while running.
+WAV-first, English batch transcription on Apple Silicon. Personal prototype. Source may be shared through the owner’s private GitHub repository; no public release or marketplace publication. No translation, live streaming, dictionary/prompt hints, account, or API key. Audio goes to the fixed loopback address `127.0.0.1:8010`, never a configured external provider. The unauthenticated endpoint can be used by other local processes while running.
 
 ## Installed and pinned
 
@@ -51,3 +51,26 @@ afconvert -f WAVE -d LEI16@16000 -c 1 build/sample.aiff build/sample.wav
 Prototype code is GPL-3.0-only; see LICENSE. Vendored SDK is from TypeWhisper and retains its original GPLv3 license in `vendor/TYPEWHISPER-LICENSE`. Phonon runtime is Apache-2.0. Phonon-2 weights are CC-BY-4.0, a derivative of NVIDIA parakeet-tdt-0.6b-v3; model weights are not included in git. Retain Fermion Research attribution and upstream model NOTICE/license when distributing model material. Review all dependency licenses before any public distribution.
 
 Sources: https://www.typewhisper.com/en/ ; https://github.com/TypeWhisper/typewhisper-mac ; https://github.com/fermionresearch/phonon ; https://huggingface.co/FermionResearch/Phonon-2 .
+
+## Install on HomeBookPro
+
+This prototype requires **Apple Silicon**, macOS 14+, Xcode/Swift 6+, and exactly TypeWhisper **1.6.1**. Build checks enforce architecture and host version. The HomeBookPro hardware has not been assessed here.
+
+1. Install TypeWhisper 1.6.1 from the official vendor-linked release: https://github.com/TypeWhisper/typewhisper-mac/releases/tag/v1.6.1 . Put TypeWhisper.app in `/Applications`. Preserve Gatekeeper protections; verify the app with `codesign --verify --deep --strict /Applications/TypeWhisper.app` and `spctl --assess --type execute -v /Applications/TypeWhisper.app`.
+2. Install Xcode and complete its normal first-run setup. Install `uv` using Astral's official instructions (https://docs.astral.sh/uv/getting-started/installation/) or the Homebrew registry (`brew install uv`). Authenticate GitHub using your normal credentials to access the private repo.
+3. Clone into a new folder and build:
+
+```sh
+mkdir -p ~/Dev
+cd ~/Dev
+git clone https://github.com/svkozak/typewhisper-phonon.git
+cd typewhisper-phonon
+bash scripts/setup-runtime.sh
+bash scripts/build.sh
+bash scripts/install-plugin.sh
+bash scripts/serve.sh
+```
+
+The runtime script preserves existing environments and syncs exact versions from official PyPI. The server’s first run downloads and checksum-verifies the official model. Keep this terminal open. In TypeWhisper enable Phonon Local and select Phonon-2 (Local) / Phonon-2, English, with translation off. Approve microphone/accessibility only when you decide to use dictation. These permissions and plugin activation are manual; installation scripts do not grant them.
+
+For diagnostics with no server listening on 8010, `build/error-test` checks local validation and unavailable-server errors. A temporary test fixture is `scripts/mock-error-server.py`; running `build/error-test --mock` while it listens tests WAV multipart, HTTP failures and malformed responses. It serves exactly three requests and exits; it never uses model weights or personal audio.

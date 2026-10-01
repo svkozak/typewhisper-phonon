@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
+[[ "$(uname -m)" == arm64 ]] || { echo "Apple Silicon required"; exit 1; }
+host_version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' /Applications/TypeWhisper.app/Contents/Info.plist)
+[[ "$host_version" == 1.6.1 ]] || { echo "Requires TypeWhisper 1.6.1; found $host_version. Rebuild SDK against that host before proceeding."; exit 1; }
 frameworks=/Applications/TypeWhisper.app/Contents/Frameworks
 mkdir -p build/PhononPlugin.bundle/Contents/{MacOS,Resources}
 swiftc -emit-module -module-name TypeWhisperPluginSDK -swift-version 6 -target arm64-apple-macos14.0 vendor/TypeWhisperPluginSDK/*.swift -emit-module-path build/TypeWhisperPluginSDK.swiftmodule
@@ -12,3 +15,4 @@ PLIST
 codesign --force --sign - build/PhononPlugin.bundle
 swiftc -parse-as-library -swift-version 6 -target arm64-apple-macos14.0 -I build -F "$frameworks" -framework TypeWhisperPluginSDK -Xlinker -rpath -Xlinker "$frameworks" Sources/PhononPlugin.swift Sources/SmokeTest.swift -o build/smoke-test
 swiftc -parse-as-library -swift-version 6 -target arm64-apple-macos14.0 -I build -F "$frameworks" -framework TypeWhisperPluginSDK -Xlinker -rpath -Xlinker "$frameworks" Sources/BundleTest.swift -o build/bundle-test
+swiftc -parse-as-library -swift-version 6 -target arm64-apple-macos14.0 -I build -F "$frameworks" -framework TypeWhisperPluginSDK -Xlinker -rpath -Xlinker "$frameworks" Sources/PhononPlugin.swift Sources/ErrorTest.swift -o build/error-test
