@@ -9,7 +9,8 @@ API key is needed to use the plugin.
 - Apple Silicon Mac with macOS 14 or later.
 - TypeWhisper **1.6.1** (the tested host version).
 - Internet access for the first model download (164 MB).
-- Roughly 2 GB of free disk space during model loading.
+- About 180 MB for the cached model. Allow roughly 2 GB of free disk space
+  during startup for temporary model loading files, which are removed afterward.
 
 ## Install
 
