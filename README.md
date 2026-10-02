@@ -1,8 +1,7 @@
 # Phonon
 
-Local English dictation for [TypeWhisper](https://www.typewhisper.com/), powered by
-Phonon-2 and native Swift/MLX. Audio stays on your Mac. No Python installation or
-API key is needed to use the plugin.
+Local on-device English dictation for [TypeWhisper](https://www.typewhisper.com/), powered by
+[Phonon-2](https://www.fermionresearch.com/models/phonon-2/) and native Swift/MLX.
 
 ## Requirements
 
@@ -14,21 +13,11 @@ API key is needed to use the plugin.
 
 ## Install
 
-1. Quit TypeWhisper.
-2. Open the signed, notarised release disk image.
-3. Copy `PhononPlugin.bundle` into `~/Library/Application Support/TypeWhisper/Plugins/`.
-4. Open TypeWhisper and enable **Phonon**.
-5. Wait for the model download and preparation, then select the **Phonon** engine
+1. Open the release disk image.
+2. In TypeWhisper open Settings > Integrations and click 'Install Plugin'
+3. Select `PhononPlugin.bundle` on the mounted disk.
+4. Wait for the model download and preparation, then select the **Phonon** engine
    and **Phonon-2** model.
-
-When updating, replace the existing bundle while TypeWhisper is closed. The
-model cache is preserved.
-
-## Use
-
-Dictate in English with translation disabled. The model downloads once and stays
-outside the plugin bundle. Later startup and transcription work offline.
-Translation, live streaming, and dictionary or prompt hints are not supported.
 
 Model files and logs are stored under:
 
@@ -61,7 +50,7 @@ Third-party components retain their own licenses; see
 [Native component notices](prototypes/phonon-swift/THIRD_PARTY_NOTICES.md).
 
 This plugin uses [Phonon-2](https://huggingface.co/FermionResearch/Phonon-2) by
-Fermion Research, based on NVIDIA's Parakeet TDT 0.6B v3. Model weights are
-downloaded directly from Hugging Face, are not included in the plugin bundle,
-and are licensed separately under
-[CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
+Fermion Research, based on NVIDIA's Parakeet TDT 0.6B v3.
+
+Model weights are downloaded directly from Hugging Face, are not included in the plugin bundle,
+and are licensed separately under [CC-BY-4.0](https://creativecommons.org/licenses/by/4.0/).
