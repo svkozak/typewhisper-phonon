@@ -13,7 +13,7 @@ if [[ -z "${DEVELOPER_DIR:-}" ]]; then
         echo 'Set DEVELOPER_DIR to a full Xcode installation.'; exit 1
     fi
 fi
-bash prototypes/phonon-swift/build.sh
+bash Engine/build.sh
 frameworks=/Applications/TypeWhisper.app/Contents/Frameworks
 bundle=build/PhononPlugin.bundle
 # Always assemble a fresh bundle; previous build resources cannot leak into it.
@@ -26,13 +26,13 @@ xcrun swiftc -emit-library -module-name PhononPlugin "${flags[@]}" "${sources[@]
 cp manifest.json THIRD_PARTY_NOTICES.md "$bundle/Contents/Resources/"
 cp LICENSE "$bundle/Contents/Resources/Licenses/PHONON-PLUGIN-LICENSE"
 cp vendor/TYPEWHISPER-LICENSE "$bundle/Contents/Resources/Licenses/TYPEWHISPER-LICENSE"
-cp prototypes/phonon-swift/.build/release/PhononSwift-distribution "$bundle/Contents/Resources/Native/PhononSwift"
-cp prototypes/phonon-swift/.build/release/mlx.metallib "$bundle/Contents/Resources/Native/"
-cp prototypes/phonon-swift/FERMION-LICENSE "$bundle/Contents/Resources/Licenses/FERMION-LICENSE"
-cp prototypes/phonon-swift/Sources/CZstd/LICENSE "$bundle/Contents/Resources/Licenses/ZSTD-LICENSE"
-cp prototypes/phonon-swift/Sources/CZstd/COPYING "$bundle/Contents/Resources/Licenses/ZSTD-COPYING"
-cp prototypes/phonon-swift/THIRD_PARTY_NOTICES.md "$bundle/Contents/Resources/NATIVE-NOTICES.md"
-for dependency in prototypes/phonon-swift/.build/checkouts/*; do
+cp Engine/.build/release/PhononSwift-distribution "$bundle/Contents/Resources/Native/PhononSwift"
+cp Engine/.build/release/mlx.metallib "$bundle/Contents/Resources/Native/"
+cp Engine/FERMION-LICENSE "$bundle/Contents/Resources/Licenses/FERMION-LICENSE"
+cp Engine/Sources/CZstd/LICENSE "$bundle/Contents/Resources/Licenses/ZSTD-LICENSE"
+cp Engine/Sources/CZstd/COPYING "$bundle/Contents/Resources/Licenses/ZSTD-COPYING"
+cp Engine/THIRD_PARTY_NOTICES.md "$bundle/Contents/Resources/NATIVE-NOTICES.md"
+for dependency in Engine/.build/checkouts/*; do
     for license_name in LICENSE LICENSE.txt LICENSE.md COPYING COPYING.txt NOTICE NOTICE.txt; do
         if [[ -f "$dependency/$license_name" ]]; then
             cp "$dependency/$license_name" "$bundle/Contents/Resources/Licenses/SwiftDependencies/$(basename "$dependency")-$license_name"

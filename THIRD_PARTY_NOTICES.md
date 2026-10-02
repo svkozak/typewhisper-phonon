@@ -8,7 +8,7 @@ The native helper uses MLX Swift and mlx-audio-swift (MIT), a container reader
 adapted from Fermion Research 0.2.7 (Apache-2.0), and Zstandard 1.5.7
 (distributed under BSD-3-Clause). Their licenses and the licenses of transitive
 Swift dependencies are included in the bundle's Resources/Licenses folder.
-See prototypes/phonon-swift/THIRD_PARTY_NOTICES.md for pinned source versions
+See Engine/THIRD_PARTY_NOTICES.md for pinned source versions
 and details of our changes.
 
 Phonon-2 model weights are downloaded directly from Hugging Face and are not

@@ -7,8 +7,8 @@ Silicon. Read [README.md](README.md) for user behaviour and
 ## Project layout
 
 - `Sources/`: TypeWhisper plugin, settings view, and helper process controller.
-- `prototypes/phonon-swift/`: the production native engine, despite the folder
-  name. Includes model download, container decoding, audio input, and inference.
+- `Engine/`: the production native Swift/MLX engine. Includes model download,
+  container decoding, audio input, and inference.
 - `scripts/`: build, installation, verification, and release tools.
 - `vendor/TypeWhisperPluginSDK/`: pinned host SDK interfaces.
 - `manifest.json`: the authoritative plugin manifest.

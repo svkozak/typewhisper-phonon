@@ -21,7 +21,7 @@ folder and keeps the model cache. Development builds use ad-hoc signing.
 
 The build pins MLX Swift and the audio library, compiles MLX's prepared Metal
 kernels, and strips development symbols from the distributed helper. Dependency
-versions are recorded in `prototypes/phonon-swift/Package.resolved`.
+versions are recorded in `Engine/Package.resolved`.
 
 ## Verify
 
@@ -102,5 +102,5 @@ lock. Audio is decoded in memory.
 Loading expands the compressed weights and uses a temporary dense checkpoint,
 which is removed after loading. MLX allocations peaked near 2.6 GB on the
 development Mac. Accuracy across speakers and long recordings needs broader
-validation. See the [native engine notes](../prototypes/phonon-swift/README.md)
+validation. See the [native engine notes](../Engine/README.md)
 for the container comparison and earlier feasibility measurements.

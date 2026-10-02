@@ -1,7 +1,7 @@
 // swift-tools-version:6.2
 import PackageDescription
 let package = Package(
-    name: "PhononSwiftPrototype",
+    name: "PhononEngine",
     platforms: [.macOS(.v14)],
     dependencies: [
         .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", revision: "8d86630ade569728aaea3dc1a29fc44e2efa719b"),

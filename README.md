@@ -47,7 +47,7 @@ The plugin is licensed under **GPL-3.0-only**. See [LICENSE](LICENSE).
 TypeWhisper SDK code retains its upstream copyright and GPLv3 license.
 Third-party components retain their own licenses; see
 [Third-party notices](THIRD_PARTY_NOTICES.md) and
-[Native component notices](prototypes/phonon-swift/THIRD_PARTY_NOTICES.md).
+[Native component notices](Engine/THIRD_PARTY_NOTICES.md).
 
 This plugin uses [Phonon-2](https://huggingface.co/FermionResearch/Phonon-2) by
 Fermion Research, based on NVIDIA's Parakeet TDT 0.6B v3.

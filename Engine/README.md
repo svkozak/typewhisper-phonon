@@ -10,8 +10,8 @@ Use an Apple Silicon Mac with full Xcode and Swift 6.3+. The package pins
 MLX Swift 0.32.3 and the audio library to a specific commit.
 
 ```sh
-bash prototypes/phonon-swift/build.sh
-prototypes/phonon-swift/.build/release/PhononSwift \
+bash Engine/build.sh
+Engine/.build/release/PhononSwift \
   /PATH/TO/MODEL_DIRECTORY recording.wav 5
 ```
 
@@ -19,7 +19,7 @@ The CLI reports load time, transcription time, memory measurements, and the
 model container checksum. An optional fourth argument writes a tensor audit:
 
 ```sh
-prototypes/phonon-swift/.build/release/PhononSwift \
+Engine/.build/release/PhononSwift \
   /PATH/TO/MODEL_DIRECTORY recording.wav 5 /PATH/TO/weights.json
 ```
 
@@ -42,5 +42,5 @@ weights, rather than Phonon's packed execution optimisations. Earlier comparison
 with the Python engine matched all 697 tensor names, shapes, and float32 hashes;
 the comparison tooling is retained in Git history.
 
-See the [development guide](../../docs/DEVELOPMENT.md) for current verification
+See the [development guide](../docs/DEVELOPMENT.md) for current verification
 and release commands, and [notices](THIRD_PARTY_NOTICES.md) for source licenses.
