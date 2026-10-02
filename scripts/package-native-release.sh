@@ -21,13 +21,11 @@ ditto "$bundle" "$stage/PhononPlugin.bundle"
 cat > "$stage/Install Phonon.txt" <<'TXT'
 Phonon — Apple Silicon, macOS 14+, TypeWhisper 1.6.1
 
-1. Quit TypeWhisper.
-2. Copy PhononPlugin.bundle into:
-   ~/Library/Application Support/TypeWhisper/Plugins/
-   Replace the previous PhononPlugin.bundle when updating.
-3. Open TypeWhisper and enable Phonon.
-4. Wait for the 164 MB model download and model preparation.
-5. Select Phonon engine and Phonon-2 model for English dictation.
+1. Open the release disk image.
+2. In TypeWhisper open Settings > Integrations and click 'Install Plugin'.
+3. Select PhononPlugin.bundle on the mounted disk.
+4. Wait for the model download and preparation, then select the Phonon engine
+   and Phonon-2 model.
 
 The model downloads once into TypeWhisper's PluginData folder. Subsequent
 startup and transcription work offline. No Python or Homebrew is required.
