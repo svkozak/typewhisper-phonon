@@ -1,4 +1,4 @@
-# Phonon
+# TypeWhisper Phonon
 
 Local on-device English dictation plugin for [TypeWhisper](https://www.typewhisper.com/), powered by
 [Phonon-2](https://www.fermionresearch.com/models/phonon-2/) model and native Swift/MLX.
