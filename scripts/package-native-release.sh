@@ -19,7 +19,7 @@ stage=$(mktemp -d "$PWD/build/release-stage.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 ditto "$bundle" "$stage/PhononPlugin.bundle"
 cat > "$stage/Install Phonon.txt" <<'TXT'
-Phonon — Apple Silicon, macOS 15+, TypeWhisper 1.7.0
+Phonon — Apple Silicon, macOS 15+, TypeWhisper 1.7.0 or 1.7.1
 
 1. Open the release disk image.
 2. In TypeWhisper open Settings > Integrations and click 'Install Plugin'.

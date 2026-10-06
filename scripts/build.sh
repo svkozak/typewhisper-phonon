@@ -3,7 +3,10 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 [[ "$(uname -m)" == arm64 ]] || { echo 'Apple Silicon required'; exit 1; }
 host_version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' /Applications/TypeWhisper.app/Contents/Info.plist)
-[[ "$host_version" == 1.7.0 ]] || { echo "Requires TypeWhisper 1.7.0; found $host_version."; exit 1; }
+case "$host_version" in
+    1.7.0|1.7.1) ;;
+    *) echo "Requires TypeWhisper 1.7.0 or 1.7.1; found $host_version."; exit 1 ;;
+esac
 if [[ -z "${DEVELOPER_DIR:-}" ]]; then
     if [[ -d /Applications/Xcode-26.6.0.app ]]; then
         export DEVELOPER_DIR=/Applications/Xcode-26.6.0.app/Contents/Developer

@@ -6,7 +6,7 @@ Local on-device English dictation plugin for [TypeWhisper](https://www.typewhisp
 ## Requirements
 
 - Apple Silicon Mac with macOS 15 or later.
-- TypeWhisper **1.7.0** (the tested host version).
+- TypeWhisper **1.7.0 or 1.7.1** (the tested host versions).
 - Internet access for the first model download (345 MB).
 - About 700 MB for downloaded and compiled model files. First setup and the
   system Neural Engine cache need additional space. Preparation can take
@@ -32,7 +32,7 @@ Logs are available under **Troubleshooting → Show Logs**.
 ## Development
 
 Building needs full Xcode with Swift 6.3+ and
-TypeWhisper 1.7.0 installed in `/Applications`.
+TypeWhisper 1.7.0 or 1.7.1 installed in `/Applications`.
 
 ```sh
 bash scripts/build.sh

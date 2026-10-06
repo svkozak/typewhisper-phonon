@@ -1,7 +1,7 @@
 # Native development
 
 Use an Apple Silicon Mac, macOS 15+, full Xcode with Swift 6.3+, Python 3, and
-TypeWhisper **1.7.0** in `/Applications`. The plugin links the installed host SDK
+TypeWhisper **1.7.0 or 1.7.1** in `/Applications`. The plugin links the installed host SDK
 framework. Rebuild and verify compatibility before using another host version.
 
 ## Build and install
@@ -22,7 +22,7 @@ the same fixed helper identifier as releases: `local.typewhisper.phonon.engine`.
 The build pins Fermion Research's phonon-coreml package and strips development
 symbols from the distributed helper. The dependency revision is recorded in
 `Engine/Package.resolved`. The vendored host SDK is pinned to TypeWhisper 1.7.0;
-see [vendor source details](../vendor/README.md).
+the 1.7.1 SDK sources are identical. See [vendor source details](../vendor/README.md).
 
 ## Verify
 

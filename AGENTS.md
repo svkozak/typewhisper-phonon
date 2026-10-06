@@ -41,7 +41,7 @@ Silicon. Read [README.md](README.md) for user behaviour and
 ## Build and verification
 
 - Use full Xcode with Swift 6.3+ and the compatible TypeWhisper SDK.
-  The documented and tested host version is 1.7.0.
+  The documented and tested host versions are 1.7.0 and 1.7.1.
 - Set `DEVELOPER_DIR` for the command when needed. Do not change the computer's
   global Xcode selection as part of routine work.
 - Build with `bash scripts/build.sh`. Do not create a second build path.
