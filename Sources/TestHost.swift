@@ -27,7 +27,7 @@ func makeTestHost() throws -> TestHost {
 }
 
 func waitForPlugin(_ plugin: any TranscriptionEnginePlugin) async throws {
-    let deadline = Date().addingTimeInterval(600)
+    let deadline = Date().addingTimeInterval(1200)
     while !plugin.isConfigured {
         guard Date() < deadline else { throw NSError(domain: "Plugin readiness timeout", code: 1) }
         if let activity = (plugin as? any PluginSettingsActivityReporting)?.currentSettingsActivity, activity.isError {

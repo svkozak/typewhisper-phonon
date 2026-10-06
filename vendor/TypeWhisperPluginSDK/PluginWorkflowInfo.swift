@@ -77,6 +77,7 @@ public struct PluginWorkflowBehavior: Codable, Sendable, Equatable {
     public let fineTuning: String
     public let providerId: String?
     public let cloudModel: String?
+    public let effortId: String?
     public let transcriptionEngineId: String?
     public let transcriptionModelId: String?
     public let temperatureMode: PluginLLMTemperatureMode
@@ -87,6 +88,7 @@ public struct PluginWorkflowBehavior: Codable, Sendable, Equatable {
         fineTuning: String = "",
         providerId: String? = nil,
         cloudModel: String? = nil,
+        effortId: String? = nil,
         transcriptionEngineId: String? = nil,
         transcriptionModelId: String? = nil,
         temperatureMode: PluginLLMTemperatureMode = .inheritProviderSetting,
@@ -96,6 +98,7 @@ public struct PluginWorkflowBehavior: Codable, Sendable, Equatable {
         self.fineTuning = fineTuning
         self.providerId = providerId
         self.cloudModel = cloudModel
+        self.effortId = effortId
         self.transcriptionEngineId = transcriptionEngineId
         self.transcriptionModelId = transcriptionModelId
         self.temperatureMode = temperatureMode
@@ -107,19 +110,34 @@ public struct PluginWorkflowBehavior: Codable, Sendable, Equatable {
     }
 }
 
+public enum PluginWorkflowAutoEnterMode: String, Codable, CaseIterable, Sendable, Equatable {
+    case never
+    case spokenCommand
+    case always
+    case duringDictation
+}
+
 public struct PluginWorkflowOutput: Codable, Sendable, Equatable {
     public let format: String?
     public let autoEnter: Bool
+    public let autoEnterModeRaw: String?
     public let targetActionPluginId: String?
 
     public init(
         format: String? = nil,
         autoEnter: Bool = false,
+        autoEnterMode: PluginWorkflowAutoEnterMode? = nil,
         targetActionPluginId: String? = nil
     ) {
         self.format = format
-        self.autoEnter = autoEnter
+        self.autoEnter = autoEnterMode.map { $0 == .always } ?? autoEnter
+        self.autoEnterModeRaw = autoEnterMode?.rawValue
         self.targetActionPluginId = targetActionPluginId
+    }
+
+    public var autoEnterMode: PluginWorkflowAutoEnterMode {
+        PluginWorkflowAutoEnterMode(rawValue: autoEnterModeRaw ?? "")
+            ?? (autoEnter ? .always : .never)
     }
 }
 

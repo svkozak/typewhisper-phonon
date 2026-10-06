@@ -1,15 +1,16 @@
 # Phonon
 
 Local on-device English dictation plugin for [TypeWhisper](https://www.typewhisper.com/), powered by
-[Phonon-2](https://www.fermionresearch.com/models/phonon-2/) model and native Swift/MLX.
+[Phonon-2](https://www.fermionresearch.com/models/phonon-2/) model and native Swift/Core ML.
 
 ## Requirements
 
-- Apple Silicon Mac with macOS 14 or later.
-- TypeWhisper **1.6.1** (the tested host version).
-- Internet access for the first model download (164 MB).
-- About 180 MB for the cached model. Allow roughly 2 GB of free disk space
-  during startup for temporary model loading files, which are removed afterward.
+- Apple Silicon Mac with macOS 15 or later.
+- TypeWhisper **1.7.0** (the tested host version).
+- Internet access for the first model download (345 MB).
+- About 700 MB for downloaded and compiled model files. First setup and the
+  system Neural Engine cache need additional space. Preparation can take
+  several minutes. Preserved rollback caches also use additional space.
 
 ## Install
 
@@ -30,8 +31,8 @@ Logs are available under **Troubleshooting → Show Logs**.
 
 ## Development
 
-Building needs full Xcode with Swift 6.3+, its Metal toolchain, and
-TypeWhisper 1.6.1 installed in `/Applications`.
+Building needs full Xcode with Swift 6.3+ and
+TypeWhisper 1.7.0 installed in `/Applications`.
 
 ```sh
 bash scripts/build.sh
@@ -49,7 +50,7 @@ Third-party components retain their own licenses; see
 [Third-party notices](THIRD_PARTY_NOTICES.md) and
 [Native component notices](Engine/THIRD_PARTY_NOTICES.md).
 
-This plugin uses [Phonon-2](https://huggingface.co/FermionResearch/Phonon-2) by
+This plugin uses [Phonon-2 Core ML](https://huggingface.co/FermionResearch/Phonon-2-CoreML) by
 Fermion Research, based on NVIDIA's Parakeet TDT 0.6B v3.
 
 Model weights are downloaded directly from Hugging Face, are not included in the plugin bundle,

@@ -37,7 +37,7 @@ final class PhononServer: @unchecked Sendable {
     private let changed: @Sendable () -> Void
     private let startupTimeout: TimeInterval
 
-    init(executable: URL, dataDirectory: URL, arguments: [String] = ["--serve"], startupTimeout: TimeInterval = 600,
+    init(executable: URL, dataDirectory: URL, arguments: [String] = ["--serve"], startupTimeout: TimeInterval = 1200,
          changed: @escaping @Sendable () -> Void = {}) {
         self.executable = executable
         self.arguments = arguments

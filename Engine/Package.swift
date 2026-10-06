@@ -1,19 +1,15 @@
-// swift-tools-version:6.2
+// swift-tools-version:6.3
 import PackageDescription
+
 let package = Package(
     name: "PhononEngine",
-    platforms: [.macOS(.v14)],
+    platforms: [.macOS(.v15)],
     dependencies: [
-        .package(url: "https://github.com/Blaizzy/mlx-audio-swift.git", revision: "8d86630ade569728aaea3dc1a29fc44e2efa719b"),
-        .package(url: "https://github.com/ml-explore/mlx-swift.git", exact: "0.32.3"),
+        .package(url: "https://github.com/fermionresearch/phonon-coreml.git", revision: "464ae57460fed61d4feb6f2a7424b5be1213accb"),
     ],
     targets: [
-        .target(name: "CZstd", exclude: ["LICENSE", "COPYING"], publicHeadersPath: "include"),
         .executableTarget(name: "PhononSwift", dependencies: [
-            "CZstd",
-            .product(name: "MLXAudioSTT", package: "mlx-audio-swift"),
-            .product(name: "MLXAudioCore", package: "mlx-audio-swift"),
-            .product(name: "MLX", package: "mlx-swift"),
+            .product(name: "PhononCoreML", package: "phonon-coreml"),
         ]),
     ]
 )

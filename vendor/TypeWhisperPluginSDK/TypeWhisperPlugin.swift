@@ -30,7 +30,129 @@ public extension PluginSettingsWindowLayoutProviding {
     var minimumSettingsWindowSize: CGSize? { nil }
 }
 
+// MARK: - Plugin User Interface Contributions
+
+/// A host-rendered command contributed by a plugin.
+///
+/// Titles must already be localized by the plugin. Command identifiers are
+/// scoped to the plugin and are passed back to `performPluginCommand(_:)`.
+public struct PluginCommandDescriptor: Identifiable, Sendable, Equatable {
+    public let id: String
+    public let title: String
+    public let systemImageName: String?
+    public let isEnabled: Bool
+
+    public init(
+        id: String,
+        title: String,
+        systemImageName: String? = nil,
+        isEnabled: Bool = true
+    ) {
+        self.id = id
+        self.title = title
+        self.systemImageName = systemImageName
+        self.isEnabled = isEnabled
+    }
+}
+
+/// A plugin-owned destination rendered in TypeWhisper's settings sidebar.
+///
+/// Titles must already be localized by the plugin. Identifiers are scoped to
+/// the plugin and are passed to `settingsSidebarView(for:)` when selected.
+public struct PluginSettingsSidebarItemDescriptor: Identifiable, Sendable, Equatable {
+    public let id: String
+    public let title: String
+    public let systemImageName: String
+
+    public init(id: String, title: String, systemImageName: String) {
+        self.id = id
+        self.title = title
+        self.systemImageName = systemImageName
+    }
+}
+
+/// Optional capability for contributing commands to TypeWhisper's application
+/// menu and primary menu-bar menu, plus plugin-owned settings-sidebar pages.
+///
+/// The host owns all native menu objects. Call
+/// `HostServices.notifyCapabilitiesChanged()` after changing a descriptor so
+/// the host refreshes the rendered menus and sidebar.
+public protocol PluginUserInterfaceProviding: TypeWhisperPlugin {
+    @MainActor var appMenuCommands: [PluginCommandDescriptor] { get }
+    @MainActor var primaryMenuBarCommands: [PluginCommandDescriptor] { get }
+    @MainActor var settingsSidebarItems: [PluginSettingsSidebarItemDescriptor] { get }
+    @MainActor func settingsSidebarView(for itemId: String) -> AnyView?
+    @MainActor func performPluginCommand(_ commandId: String)
+}
+
+public extension PluginUserInterfaceProviding {
+    @MainActor var appMenuCommands: [PluginCommandDescriptor] { [] }
+    @MainActor var primaryMenuBarCommands: [PluginCommandDescriptor] { [] }
+    @MainActor var settingsSidebarItems: [PluginSettingsSidebarItemDescriptor] { [] }
+    @MainActor func settingsSidebarView(for itemId: String) -> AnyView? { nil }
+}
+
 public protocol HostModelLifecyclePolicyAwarePlugin: TypeWhisperPlugin {}
+
+/// Optional notification after the host reconciles its selected transcription engine.
+/// Implementations must re-check the live host policy, restore only installed assets,
+/// and coalesce this request with activation, settings and first-use model loads.
+/// The host may call this more than once; a request must not retry failed loads forever.
+public protocol PassiveModelRestoreProviding: HostModelLifecyclePolicyAwarePlugin {
+    func requestPassiveModelRestore()
+}
+
+/// Coalesces passive requests from activation and host selection reconciliation.
+/// Own one controller per plugin instance and cancel it on deactivation.
+public final class PluginPassiveModelRestoreController: @unchecked Sendable {
+    private let lock = NSLock()
+    private var task: Task<Void, Never>?
+    private var pendingRestore: (@Sendable () async -> Void)?
+    private var generation = 0
+
+    public init() {}
+
+    public func request(_ restore: @escaping @Sendable () async -> Void) {
+        lock.withLock {
+            // Keep the newest request even when an older gate read is finishing.
+            // Dropping it could miss a rapid away-and-back selection change.
+            pendingRestore = restore
+            guard task == nil else { return }
+            generation += 1
+            let currentGeneration = generation
+            // Start after the current main-actor selection/model update has finished.
+            // Correctness still comes from explicit reconciliation and the live gate.
+            task = Task { @MainActor [weak self] in
+                while !Task.isCancelled,
+                      let next = self?.takePending(currentGeneration) {
+                    await next()
+                }
+            }
+        }
+    }
+
+    public func cancel() {
+        lock.withLock {
+            generation += 1
+            task?.cancel()
+            task = nil
+            pendingRestore = nil
+        }
+    }
+
+    private func takePending(_ currentGeneration: Int) -> (@Sendable () async -> Void)? {
+        lock.withLock {
+            guard generation == currentGeneration else { return nil }
+            guard let next = pendingRestore else {
+                task = nil
+                return nil
+            }
+            pendingRestore = nil
+            return next
+        }
+    }
+}
+
 
 // MARK: - Shared Settings Activity
 
@@ -394,6 +516,75 @@ public extension FileJobAutomationPlugin {
     var priority: Int { 400 }
 }
 
+// MARK: - Media Import Plugin
+
+/// Progress emitted while a plugin resolves a remote media source into a local file.
+public struct PluginMediaImportProgress: Sendable, Equatable {
+    public let fractionCompleted: Double?
+    public let status: String?
+
+    public init(fractionCompleted: Double? = nil, status: String? = nil) {
+        self.fractionCompleted = fractionCompleted
+        self.status = status
+    }
+}
+
+/// A local media file produced by a media-import plugin.
+///
+/// `cleanupToken` is opaque to the host. The host returns the complete value to
+/// `removeImportedMedia(_:)` when the queue item is removed or reset.
+public struct PluginImportedMedia: Sendable, Equatable {
+    public let localFileURL: URL
+    public let displayName: String?
+    public let cleanupToken: String?
+
+    public init(
+        localFileURL: URL,
+        displayName: String? = nil,
+        cleanupToken: String? = nil
+    ) {
+        self.localFileURL = localFileURL
+        self.displayName = displayName
+        self.cleanupToken = cleanupToken
+    }
+}
+
+public struct PluginMediaImportAvailability: Sendable, Equatable {
+    public let isAvailable: Bool
+    public let unavailableReason: String?
+
+    public init(isAvailable: Bool, unavailableReason: String? = nil) {
+        self.isAvailable = isAvailable
+        self.unavailableReason = unavailableReason
+    }
+
+    public static let available = PluginMediaImportAvailability(isAvailable: true)
+}
+
+/// Optional plugin capability for turning a remote URL into a local audio or
+/// video file that the host can feed through its regular file-transcription pipeline.
+public protocol MediaImportPlugin: TypeWhisperPlugin {
+    @MainActor var mediaImportId: String { get }
+    @MainActor var mediaImportDisplayName: String { get }
+    @MainActor var mediaImportAvailability: PluginMediaImportAvailability { get }
+    @MainActor func canImportMedia(from url: URL) -> Bool
+    @MainActor func importMedia(
+        from url: URL,
+        onProgress: @Sendable @escaping (PluginMediaImportProgress) -> Bool
+    ) async throws -> PluginImportedMedia
+    @MainActor func removeImportedMedia(_ media: PluginImportedMedia) async
+}
+
+public extension MediaImportPlugin {
+    @MainActor var mediaImportAvailability: PluginMediaImportAvailability { .available }
+    @MainActor func removeImportedMedia(_ media: PluginImportedMedia) async {}
+}
+
+/// Optional extension for bundles that expose more than one media importer.
+public protocol AdditionalMediaImportPluginsProviding: TypeWhisperPlugin {
+    @MainActor var additionalMediaImportPlugins: [any MediaImportPlugin] { get }
+}
+
 // MARK: - Transcription Engine Plugin
 
 public struct AudioData: Sendable {
@@ -603,6 +794,17 @@ public protocol LiveTranscriptionSession: AnyObject, Sendable {
     func appendAudio(samples: [Float]) async throws
     func finish() async throws -> PluginTranscriptionResult
     func cancel() async
+}
+
+/// Describes whether live progress text covers all audio so far or only a recent window.
+public enum LiveTranscriptionProgressMode: Sendable, Equatable {
+    case rollingWindow
+    case completeSnapshot
+}
+
+/// Optional provider capability for declaring how live progress callbacks should be interpreted.
+public protocol LiveTranscriptionProgressModeProviding: Sendable {
+    var liveTranscriptionProgressMode: LiveTranscriptionProgressMode { get }
 }
 
 public enum PluginDictionaryTerms {
@@ -1015,9 +1217,13 @@ public enum PluginSDKCompatibility {
     /// host and marketplace plugins must be rebuilt together against a new SDK contract.
     public static let currentVersion = "v1"
 
+    /// Additive capability marker for hosts exporting the custom model import API.
+    /// Older v1 hosts compare markers exactly and reject these bundles before load.
+    public static let modelImportVersion = "v1-model-import"
+
     public static func isCompatible(manifestVersion: String?, isBundled: Bool) -> Bool {
         guard !isBundled else { return true }
-        return manifestVersion == currentVersion
+        return manifestVersion == currentVersion || manifestVersion == modelImportVersion
     }
 
     public static func incompatibilityReason(manifestVersion: String?, isBundled: Bool) -> String? {
@@ -1025,7 +1231,7 @@ public enum PluginSDKCompatibility {
         guard let manifestVersion else {
             return "missing sdkCompatibilityVersion (expected \(currentVersion))"
         }
-        guard manifestVersion == currentVersion else {
+        guard isCompatible(manifestVersion: manifestVersion, isBundled: false) else {
             return "requires sdkCompatibilityVersion \(currentVersion) (found \(manifestVersion))"
         }
         return nil

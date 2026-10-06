@@ -1,29 +1,28 @@
-The native engine uses MLX Swift 0.32.3 (MIT) and mlx-audio-swift at commit
-8d86630ade569728aaea3dc1a29fc44e2efa719b (MIT). Other transitive dependencies
-are pinned in Package.resolved. Their licenses remain in the SwiftPM checkouts.
+The native engine uses Fermion Research's phonon-coreml 1.1.1 (Apache-2.0),
+pinned to commit 464ae57460fed61d4feb6f2a7424b5be1213accb:
+https://github.com/fermionresearch/phonon-coreml/tree/464ae57460fed61d4feb6f2a7424b5be1213accb
 
-Container.swift ports the container reader and tensor name mapping from
-fermion-research 0.2.7 (Apache-2.0). The original license is included as
-FERMION-LICENSE. The Phonon model is downloaded separately from the engine.
+The upstream Swift library and C decoder are unmodified. The engine selects
+CPU and Neural Engine compute units, serial encoder and decoder jobs, and eager
+loading of every supported encoder window. Our adapter limits single windows
+to 34.9 seconds and long-audio windows to 14.9 seconds, allowing the package's
+20 ms margin when selecting an encoder function. Clips below 20 ms return empty
+text before frontend normalization. Our model store compiles into a
+verified local cache before calling the library. This keeps the compiled model
+in PluginData instead of the library's shared cache location. Our WAV decoder
+and AVAudioConverter resampler keep plugin audio in memory. The upstream
+FileSource API is not used, because it can write temporary resampled audio.
 
-The two-line dependency patch explicitly selects MLX.compile instead of the
-MLXLMCommon overload. It does not add unchecked Sendable conformances or relax
-Swift concurrency checking. The command-line experiment invokes inference
-serially from one thread; this does not establish safe concurrent inference.
+The dependency's LICENSE and NOTICE are copied into the distributed bundle.
+No Python code or model weights are copied into the bundle.
 
-The build script compiles MLX Swift's prepared Metal kernels with Apple's Metal
-compiler. No Python library is copied into the native bundle.
-
-The streaming model decoder uses Zstandard 1.5.7 (BSD-3-Clause or GPL-2.0;
-distributed here under BSD-3-Clause). Its amalgamated decoder was generated
-from facebook/zstd commit f8745da6ff1ad1e7bab384bd1f9d742439278e99 with the
-upstream build/single_file_libs/combine.py tool. The original LICENSE and
-COPYING files are included. The generator is CC0/public domain.
-
-Phonon-2 weights are downloaded from FermionResearch/Phonon-2, revision
-ca1bef26bcd8ef4a7e16d0636d8a77bb25e298ee, under CC-BY-4.0. Credit:
+Phonon-2 Core ML model data is downloaded from FermionResearch/Phonon-2-CoreML,
+revision e931079df1f6bff26f5f416c1c8880e76a0cf2a3, under CC-BY-4.0. Credit:
 Fermion Research; base model nvidia/parakeet-tdt-0.6b-v3. Source and license:
-https://huggingface.co/FermionResearch/Phonon-2
+https://huggingface.co/FermionResearch/Phonon-2-CoreML/tree/e931079df1f6bff26f5f416c1c8880e76a0cf2a3
 https://creativecommons.org/licenses/by/4.0/
-Weights remain outside the plugin bundle and are not modified by download.
-The native loader expands the container into dense bfloat16 tensors for MLX.
+
+Downloaded files are not modified. Core ML creates a compiled model locally.
+The download includes the model repository's NOTICE, code license, and weights
+license. The model's source container checksum matches the Phonon-2 weights
+used by the previous MLX engine.

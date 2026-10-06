@@ -7,7 +7,7 @@ func check(_ condition: @autoclosure () -> Bool, _ label: String) throws {
 }
 
 func waitForServer(_ server: PhononServer) async throws {
-    let deadline = Date().addingTimeInterval(90)
+    let deadline = Date().addingTimeInterval(600)
     while server.status != .ready {
         if case .failed(let error) = server.status { throw PhononError(message: error) }
         guard Date() < deadline else { throw PhononError(message: "Readiness timeout") }
@@ -54,7 +54,7 @@ func waitForExit(_ pid: Int32) async throws {
         let (_, response) = try await session.data(for: unauthorized)
         try check((response as? HTTPURLResponse)?.statusCode == 401, "transcription requires the private token")
         kill(firstPID, SIGKILL)
-        let deadline = Date().addingTimeInterval(90)
+        let deadline = Date().addingTimeInterval(600)
         while server.processIdentifier == firstPID || server.status != .ready {
             guard Date() < deadline else { throw PhononError(message: "Crash recovery timeout") }
             try await Task.sleep(for: .milliseconds(250))
@@ -64,7 +64,7 @@ func waitForExit(_ pid: Int32) async throws {
         for _ in 2...3 {
             let pid = server.processIdentifier!
             kill(pid, SIGKILL)
-            let recoveryDeadline = Date().addingTimeInterval(90)
+            let recoveryDeadline = Date().addingTimeInterval(600)
             while server.processIdentifier == pid || server.status != .ready {
                 guard Date() < recoveryDeadline else { throw PhononError(message: "Recovery budget test timeout") }
                 try await Task.sleep(for: .milliseconds(250))

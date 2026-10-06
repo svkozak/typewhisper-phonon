@@ -19,7 +19,7 @@ stage=$(mktemp -d "$PWD/build/release-stage.XXXXXX")
 trap 'rm -rf "$stage"' EXIT
 ditto "$bundle" "$stage/PhononPlugin.bundle"
 cat > "$stage/Install Phonon.txt" <<'TXT'
-Phonon — Apple Silicon, macOS 14+, TypeWhisper 1.6.1
+Phonon — Apple Silicon, macOS 15+, TypeWhisper 1.7.0
 
 1. Open the release disk image.
 2. In TypeWhisper open Settings > Integrations and click 'Install Plugin'.
@@ -29,7 +29,9 @@ Phonon — Apple Silicon, macOS 14+, TypeWhisper 1.6.1
 
 The model downloads once into TypeWhisper's PluginData folder. Subsequent
 startup and transcription work offline. No Python or Homebrew is required.
-Allow roughly 2 GB of free disk space during initial model loading.
+The model download is about 345 MB. Downloaded and compiled files use about
+700 MB. Allow additional space for first setup, the system Neural Engine
+cache, and preserved rollback caches. Preparation can take several minutes.
 
 The bundle is Developer ID signed. Notarisation status is recorded in the
 separate release JSON. A signed build without Accepted notarisation may still

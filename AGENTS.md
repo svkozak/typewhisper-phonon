@@ -1,14 +1,14 @@
 # Working on Phonon
 
-Phonon is a native Swift/MLX transcription plugin for TypeWhisper on Apple
+Phonon is a native Swift/Core ML transcription plugin for TypeWhisper on Apple
 Silicon. Read [README.md](README.md) for user behaviour and
 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for build, test, and release commands.
 
 ## Project layout
 
 - `Sources/`: TypeWhisper plugin, settings view, and helper process controller.
-- `Engine/`: the production native Swift/MLX engine. Includes model download,
-  container decoding, audio input, and inference.
+- `Engine/`: the production native Swift/Core ML engine. Includes model download,
+  Core ML compilation, audio input, and inference.
 - `scripts/`: build, installation, verification, and release tools.
 - `vendor/TypeWhisperPluginSDK/`: pinned host SDK interfaces.
 - `manifest.json`: the authoritative plugin manifest.
@@ -26,12 +26,12 @@ Silicon. Read [README.md](README.md) for user behaviour and
 - Keep audio processing in memory. Do not add recordings or transcript contents
   to logs.
 - Preserve pinned model revisions, checksum checks, normal TLS verification,
-  bounded archive decoding, installation locks, and atomic cache publication.
+  bounded downloads, installation locks, and atomic cache publication.
   Do not bypass validation to make a failing download work.
 - Preserve user model caches and rollback bundles during installation or
   cleanup. Use disposable directories for tests.
 - Keep dependency versions pinned. Update the relevant patches, notices, and
-  verification when changing MLX, the audio library, or the host SDK.
+  verification when changing phonon-coreml or the host SDK.
 - Keep settings focused on model status and recovery. Put diagnostic details in
   troubleshooting controls or development documentation.
 - State current limits accurately: English transcription only; translation and
@@ -40,8 +40,8 @@ Silicon. Read [README.md](README.md) for user behaviour and
 
 ## Build and verification
 
-- Use full Xcode with Swift 6.3+, the Metal toolchain, and the compatible
-  TypeWhisper SDK. The documented and tested host version is 1.6.1.
+- Use full Xcode with Swift 6.3+ and the compatible TypeWhisper SDK.
+  The documented and tested host version is 1.7.0.
 - Set `DEVELOPER_DIR` for the command when needed. Do not change the computer's
   global Xcode selection as part of routine work.
 - Build with `bash scripts/build.sh`. Do not create a second build path.
@@ -61,9 +61,9 @@ Silicon. Read [README.md](README.md) for user behaviour and
 
 - Use short, clear sentences. Keep the README focused on installation, use,
   requirements, and licensing. Keep implementation details in development docs.
-- Distinguish permanent model storage (about 180 MB) from temporary space needed
-  while loading the model. Do not describe the temporary checkpoint as a bundled
-  model or a permanent download.
+- Distinguish permanent model storage (about 700 MB including the compiled
+  cache) from temporary space needed during first Core ML preparation. Do not
+  describe generated compiled files as bundled weights or an additional download.
 - Preserve GPL-3.0-only licensing and third-party notices. The separately
   downloaded Phonon-2 model has its own CC-BY-4.0 terms and attribution.
 - When preparing a release, update the version in `manifest.json` and the bundle

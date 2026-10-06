@@ -1,8 +1,6 @@
 import Foundation
 import Darwin
-import MLX
-import MLXAudioSTT
-import MLXAudioCore
+import PhononCoreML
 
 // Serial inference in an owned native helper. No model crosses a concurrency
 // boundary. Only parent/pipe monitoring runs on background threads.
@@ -43,25 +41,7 @@ enum NativeServer {
             while getppid() == parent { Thread.sleep(forTimeInterval: 1) }
             Darwin._exit(0)
         }
-        let directory = try ModelStore.ensure(cache: URL(fileURLWithPath: cache), statusFile: statusFile)
-        ModelStore.status("Loading Phonon-2…", file: statusFile)
-        print("[phonon-swift] Loading Phonon-2 with native MLX…")
-        fflush(stdout)
-        let scratch = dataDirectory.appendingPathComponent("native-load-\(getpid())-" + UUID().uuidString)
-        try FileManager.default.createDirectory(at: scratch, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
-        defer { try? FileManager.default.removeItem(at: scratch) }
-        var weights: [String: MLXArray]? = try PhononContainer.read(directory.appendingPathComponent("model.fermion"))
-        try MLX.save(arrays: weights!, url: scratch.appendingPathComponent("model.safetensors"))
-        weights = nil
-        Memory.clearCache()
-        try FileManager.default.copyItem(at: directory.appendingPathComponent("config.json"), to: scratch.appendingPathComponent("config.json"))
-        let model = try ParakeetModel.fromDirectory(scratch, computeDType: .bfloat16)
-        try FileManager.default.removeItem(at: scratch)
-        // Warm GPU kernels before publishing readiness. User audio stays in memory.
-        ModelStore.status("Preparing Phonon-2 for dictation…", file: statusFile)
-        _ = model.generate(audio: MLXArray.zeros([16000]))
-        Stream.defaultStream.synchronize()
-        Memory.clearCache()
+        let model = try CoreMLEngine.load(cache: URL(fileURLWithPath: cache), statusFile: statusFile)
         signal(SIGPIPE, SIG_IGN)
         let listener = socket(AF_INET, SOCK_STREAM, 0)
         guard listener >= 0 else { throw PrototypeError.invalid("Cannot create native engine socket") }
@@ -83,7 +63,7 @@ enum NativeServer {
         let metadata: [String: Any] = ["port": port, "pid": getpid(), "instance": instance]
         try JSONSerialization.data(withJSONObject: metadata).write(to: URL(fileURLWithPath: ready), options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: ready)
-        print("[phonon-swift] Ready: native Swift/MLX, loopback port \(port), no Python")
+        print("[phonon-swift] Ready: native Swift/Core ML, loopback port \(port), no Python")
         fflush(stdout)
         while true {
             let connection = accept(listener, nil, nil)
@@ -96,7 +76,7 @@ enum NativeServer {
         }
     }
 
-    private static func handle(_ socket: Int32, token: String, model: ParakeetModel) throws {
+    private static func handle(_ socket: Int32, token: String, model: Transcriber) throws {
         var request = Data(), buffer = [UInt8](repeating: 0, count: 65536)
         var split: Range<Data.Index>?
         while split == nil {
@@ -116,7 +96,7 @@ enum NativeServer {
             headers[key] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
         }
         if lines[0].hasPrefix("GET /health ") {
-            respond(socket, status: 200, object: ["status": "ok", "kind": "speech", "model": "FermionResearch/Phonon-2", "engine": "swift-mlx"])
+            respond(socket, status: 200, object: ["status": "ok", "kind": "speech", "model": "FermionResearch/Phonon-2", "engine": "swift-coreml"])
             return
         }
         guard lines[0].hasPrefix("POST /v1/audio/transcriptions ") else { respond(socket, status: 404, object: ["error": "Unknown endpoint"]); return }
@@ -142,12 +122,10 @@ enum NativeServer {
         }
         let samples = try decodeWAV(Data(body[start.upperBound..<end.lowerBound]))
         let started = Date()
-        let result = model.generate(audio: MLXArray(samples))
-        Stream.defaultStream.synchronize()
-        respond(socket, status: 200, object: ["text": result.text])
+        let text = try CoreMLEngine.transcribe(samples, using: model)
+        respond(socket, status: 200, object: ["text": text])
         print("[phonon-swift] Transcribed \(Double(samples.count) / 16000) seconds in \(Date().timeIntervalSince(started)) seconds")
         fflush(stdout)
-        Memory.clearCache()
     }
 
     static func decodeWAV(_ bytes: Data) throws -> [Float] {

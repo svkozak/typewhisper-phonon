@@ -72,7 +72,7 @@ public final class PhononPlugin: NSObject, TranscriptionEnginePlugin, PluginSett
     public var providerDisplayName: String { "Phonon" }
     public var isConfigured: Bool { serverStatus == .ready }
     public var transcriptionModels: [PluginModelInfo] {
-        [PluginModelInfo(id: "phonon-2", displayName: "Phonon-2", sizeDescription: "164 MB download", languageCount: 1)]
+        [PluginModelInfo(id: "phonon-2", displayName: "Phonon-2", sizeDescription: "345 MB download", languageCount: 1)]
     }
     public var selectedModelId: String? { "phonon-2" }
     public func selectModel(_ modelId: String) {}
@@ -147,25 +147,29 @@ private struct PhononSettingsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Phonon-2").font(.headline)
-            HStack {
-                if isBusy { ProgressView().controlSize(.small) }
-                Text(status.message)
-                    .foregroundStyle(isError ? Color.red : Color.primary)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                PhononSettingsHeader()
+                Divider()
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Models").font(.headline)
+                    PhononModelRow(status: status) {
+                        plugin.restartServer()
+                        status = plugin.serverStatus
+                    }
+                    Text("Downloads and loads automatically when Phonon is enabled.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Divider()
+                DisclosureGroup("Troubleshooting") {
+                    Button("Show Logs") { plugin.showLogs() }
+                        .padding(.top, 4)
+                }
             }
-            if status == .ready {
-                Text("English · Runs locally").foregroundStyle(.secondary)
-            }
-            if isError {
-                Button("Retry") { plugin.restartServer(); status = plugin.serverStatus }
-            }
-            DisclosureGroup("Troubleshooting") {
-                Button("Show Logs") { plugin.showLogs() }
-                    .padding(.top, 4)
-            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(20)
         }
-        .padding()
         .task {
             while !Task.isCancelled {
                 status = plugin.serverStatus
@@ -175,12 +179,64 @@ private struct PhononSettingsView: View {
         }
     }
 
-    private var isBusy: Bool {
-        switch status { case .starting, .installing: true; default: false }
-    }
+}
 
-    private var isError: Bool {
-        if case .failed = status { return true }
-        return false
+private struct PhononSettingsHeader: View {
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Phonon").font(.headline)
+            Text("Local English speech-to-text using Phonon-2 via Core ML.")
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+private struct PhononModelRow: View {
+    let status: PhononServerState
+    let load: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 16) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Phonon-2")
+                    Text("~345 MB download · English")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 16)
+                switch status {
+                case .ready:
+                    Label("Loaded", systemImage: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                case .stopped:
+                    Button("Load", action: load)
+                        .buttonStyle(.borderedProminent)
+                case .failed:
+                    Button("Retry", action: load)
+                        .buttonStyle(.borderedProminent)
+                case .starting, .installing:
+                    HStack(spacing: 8) {
+                        ProgressView().controlSize(.small)
+                        Text("Loading…").foregroundStyle(.secondary)
+                    }
+                }
+            }
+            switch status {
+            case .starting, .installing:
+                Text(status.message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .failed(let message):
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            case .ready, .stopped:
+                EmptyView()
+            }
+        }
     }
 }
